@@ -1,22 +1,16 @@
-'use client'; 
+import { CategoryCard } from "@/components/category-card";
+import { categories } from "@/lib/placeholder-data";
 
-import Image from "next/image";
-import { useEffect } from 'react';
+const STEPS = [
+	{ n: "01", label: "Choose a subject" },
+	{ n: "02", label: "Load or upload" },
+	{ n: "03", label: "Tune for print" },
+	{ n: "04", label: "Download STL / OBJ" },
+];
 
-export default function Home() {
-	useEffect(() => {
-		alert("Page Loaded");
-		(async() => {
-			// const response0 = await fetch("/api/cheese");
-			// const response4 = await fetch("/python");
-
-			// const response = await fetch("/cheese");
-			const response2 = await (await fetch("/api/python")).json();
-
-			console.log(response2);
-		})();
-	})
+export default function HomePage() {
 	return (
+<<<<<<< HEAD
 
 		<div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
 			<main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
@@ -48,6 +42,8 @@ const STEPS = [
 
 export default function HomePage() {
 	return (
+=======
+>>>>>>> ad5b5df59d379ff925e8f0dc40fe77898b5838a1
 		<div className="flex flex-col gap-9 px-6 py-10 sm:px-10 sm:py-12">
 			<div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
 				<div>
@@ -56,7 +52,10 @@ export default function HomePage() {
 					</div>
 					<h1 className="mt-1.5 mb-2.5 text-5xl leading-none sm:text-6xl">
 						Science you can hold.
+<<<<<<< HEAD
 >>>>>>> fe8f6b5a1e1a1a41ab5e322a588fed222fb8984a
+=======
+>>>>>>> ad5b5df59d379ff925e8f0dc40fe77898b5838a1
 					</h1>
 					<p className="max-w-xl text-[17px] text-balance">
 						Turn molecules, proteins, micrographs, blots and charts
