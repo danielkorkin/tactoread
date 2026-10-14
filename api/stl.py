@@ -20,6 +20,38 @@ BR_CELL = 6.2
 BR_LINE = 10.0
 DOT_D = 1.5
 DOT_SP = 2.5
+DOT_H = 0.6  # dot height above the floor
+DOT_SIDES = 16  # sides of each round dot
+
+BRAILLE = {
+    " ": "",
+    "a": "1",
+    "b": "12",
+    "c": "14",
+    "d": "145",
+    "e": "15",
+    "f": "124",
+    "g": "1245",
+    "h": "125",
+    "i": "24",
+    "j": "245",
+    "k": "13",
+    "l": "123",
+    "m": "134",
+    "n": "1345",
+    "o": "135",
+    "p": "1234",
+    "q": "12345",
+    "r": "1235",
+    "s": "234",
+    "t": "2345",
+    "u": "136",
+    "v": "1236",
+    "w": "2456",
+    "x": "1346",
+    "y": "13456",
+    "z": "1356",
+}
 
 USABLE_W = PLATE_W - 2 * MARGIN
 CAPTION_CELLS = int(USABLE_W / BR_CELL)  # how many cells in caption
@@ -132,7 +164,7 @@ class _MeshBuilder:
         return np.array(self.vertices, float), np.array(self.triangles, int)
 
 
-def build_mesh():
+def build_mesh(title=""):
     """Return (V, F): float (n, 3) vertices and int (m, 3) triangles, watertight."""
     mesh = _MeshBuilder()
     all_cells = cells()
@@ -161,7 +193,40 @@ def build_mesh():
                 mesh.vertex(*a, h),
             )
 
+    add_title(mesh, title)
+
     return mesh.arrays()
+
+
+def _add_dot(mesh, cx, cy):
+    """Add one round dot as a closed prism standing on the floor."""
+    angles = np.linspace(0, 2 * np.pi, DOT_SIDES, endpoint=False)
+    ring = [(cx + DOT_D / 2 * np.cos(t), cy + DOT_D / 2 * np.sin(t)) for t in angles]
+    top = [mesh.vertex(x, y, BASE_T + DOT_H) for x, y in ring]
+    bottom = [mesh.vertex(x, y, 0.0) for x, y in ring]
+
+    for k in range(1, DOT_SIDES - 1):
+        mesh.triangle(top[0], top[k], top[k + 1])
+        mesh.triangle(bottom[k + 1], bottom[k], bottom[0])
+    for k in range(DOT_SIDES):
+        n = (k + 1) % DOT_SIDES
+        mesh.quad(bottom[k], bottom[n], top[n], top[k])
+
+
+def add_title(mesh, text):
+    """Add braille text, centred in the caption area."""
+    text = text.lower()
+    if len(text) > CAPTION_CELLS:
+        raise ValueError(f"Title too long: {len(text)} > {CAPTION_CELLS} cells")
+
+    first_cell = (CAPTION_CELLS - len(text)) // 2
+    mid_y = (CAPTION_TOP + CAPTION_BOT) / 2
+
+    for i, char in enumerate(text):
+        x0 = MARGIN + (first_cell + i) * BR_CELL
+        for dot in BRAILLE[char]:
+            col, row = divmod(int(dot) - 1, 3)
+            _add_dot(mesh, x0 + col * DOT_SP, mid_y + (1 - row) * DOT_SP)
 
 
 def check_watertight(V, F):
@@ -216,4 +281,4 @@ def blank_card_stl():
 
 
 if __name__ == "__main__":
-    write_stl(*build_mesh(), "api/test.stl")
+    write_stl(*build_mesh("Test"), "api/test.stl")
