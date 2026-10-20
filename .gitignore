@@ -261,3 +261,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+vscode/
+# Frontend source (overrides the Python "lib/" rule above)
+!/src/lib/
