@@ -19,7 +19,7 @@ export default function MacromoleculeDesignPage() {
 
 	return (
 		<DesignShell
-			breadcrumb="Library / Macromolecules / Design your own"
+			breadcrumb="Library / Macromolecules / Create your own"
 			title="Import a macromolecule"
 			params={<PrintParams set="macro" ready={loaded} />}
 		>

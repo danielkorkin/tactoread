@@ -35,7 +35,7 @@ export default function PlotDesignPage() {
 
 	return (
 		<DesignShell
-			breadcrumb="Library / Data science plots / Design your own"
+			breadcrumb="Library / Data science plots / Create your own"
 			title="Chart to tactile graphic"
 			params={
 				<PrintParams set={source === "image" ? "plot" : "csv"} ready />

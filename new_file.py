@@ -1,11 +1,12 @@
 import csv
-import matplotlib.pyplot as plt
-from IPython.display import display, SVG
-import io
 import enum
-import tempfile
+import io
 import subprocess
+import tempfile
+
+import matplotlib.pyplot as plt
 import numpy as np
+from IPython.display import SVG, display
 
 COLOR_TEXTURE_1 = '#ff9999'
 COLOR_TEXTURE_2 = '#66b3ff'

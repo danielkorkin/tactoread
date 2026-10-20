@@ -1,5 +1,10 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
 import { Blueprint } from "@/components/blueprint";
 import { Badge } from "@/components/ui/badge";
+import { smilesToImageUrl } from "@/lib/api";
 import type { ExampleItem } from "@/lib/placeholder-data";
 
 export function ExampleCard({
@@ -9,10 +14,24 @@ export function ExampleCard({
 	example: ExampleItem;
 	thumb: string;
 }) {
-	return (
-		<Blueprint className="flex min-h-0 flex-col gap-2 border border-border p-2.5 transition-colors hover:border-primary">
+	const [imageFailed, setImageFailed] = React.useState(false);
+	const showImage = !!example.smiles && !imageFailed;
+
+	const card = (
+		<Blueprint className="flex h-full min-h-0 flex-col gap-2 border border-border p-2.5 transition-colors hover:border-primary">
 			<div className="hatch grid min-h-0 flex-1 place-items-center p-1.5 text-center font-mono text-[10px] leading-tight text-accent-700">
-				{thumb}
+				{showImage ? (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img
+						src={smilesToImageUrl(example.smiles!)}
+						alt={`2D structure of ${example.name}`}
+						loading="lazy"
+						onError={() => setImageFailed(true)}
+						className="max-h-full max-w-full bg-white object-contain"
+					/>
+				) : (
+					thumb
+				)}
 			</div>
 			<div className="font-heading text-[18px] font-semibold">
 				{example.name}
@@ -26,5 +45,15 @@ export function ExampleCard({
 				</Badge>
 			</div>
 		</Blueprint>
+	);
+
+	if (!example.href) return card;
+	return (
+		<Link
+			href={example.href}
+			className="block h-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+		>
+			{card}
+		</Link>
 	);
 }

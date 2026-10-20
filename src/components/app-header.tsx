@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -13,18 +12,13 @@ const NAV_LINKS = [
 	},
 	{
 		href: "/design/molecule",
-		label: "Design your own",
+		label: "Create your own",
 		match: (p: string) => p.startsWith("/design"),
 	},
 	{
-		href: "/my-models",
-		label: "My models",
-		match: (p: string) => p.startsWith("/my-models"),
-	},
-	{
-		href: "/guides",
-		label: "Teaching guides",
-		match: (p: string) => p.startsWith("/guides"),
+		href: "/tutorial",
+		label: "Tutorial",
+		match: (p: string) => p.startsWith("/tutorial"),
 	},
 ] as const;
 
@@ -60,13 +54,6 @@ export function AppHeader() {
 					);
 				})}
 			</div>
-			<Button
-				variant="secondary"
-				size="sm"
-				className="ml-3 hidden sm:inline-flex"
-			>
-				Printer · FDM 0.4 mm
-			</Button>
 		</nav>
 	);
 }

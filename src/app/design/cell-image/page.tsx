@@ -13,7 +13,7 @@ export default function CellImageDesignPage() {
 
 	return (
 		<DesignShell
-			breadcrumb="Library / Cell images / Design your own"
+			breadcrumb="Library / Cell images / Create your own"
 			title="Micrograph to lithophane"
 			params={<PrintParams set="cell" ready={ready} />}
 		>

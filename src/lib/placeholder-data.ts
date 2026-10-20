@@ -8,6 +8,12 @@ export interface ExampleItem {
 	name: string;
 	meta: string;
 	tag: string;
+	/** Extra filter labels this example belongs to (besides its tag). */
+	groups?: string[];
+	/** Small molecules: the SMILES the backend builds the model from. */
+	smiles?: string;
+	/** Where clicking the card goes. */
+	href?: string;
 }
 
 export interface FilterTag {
@@ -23,12 +29,15 @@ export interface Category {
 	name: string;
 	kicker: string;
 	thumb: string;
+	/** Small molecules: SMILES of the molecule drawn on the home card. */
+	thumbSmiles?: string;
 	total: number;
 	count: string;
 	blurb: string;
 	filters: FilterTag[];
 	examples: ExampleItem[];
-	designHref: string;
+	/** Omit to hide the "Create your own" button. */
+	designHref?: string;
 }
 
 function filters(labels: string[]): FilterTag[] {
@@ -39,36 +48,282 @@ function examples(rows: [string, string, string][]): ExampleItem[] {
 	return rows.map(([name, meta, tag]) => ({ name, meta, tag }));
 }
 
+// ─── Small-molecule samples (library cards + Create your own) ──────────────
+
+export interface MoleculeSample {
+	name: string;
+	formula: string;
+	smiles: string;
+	grade: string;
+	groups: string[];
+}
+
+export const moleculeSamples: MoleculeSample[] = [
+	{
+		name: "Water",
+		formula: "H₂O",
+		smiles: "O",
+		grade: "Grade 5+",
+		groups: ["Everyday", "Biology"],
+	},
+	{
+		name: "Caffeine",
+		formula: "C₈H₁₀N₄O₂",
+		smiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+		grade: "Grade 9+",
+		groups: ["Everyday", "Biology", "Medicine"],
+	},
+	{
+		name: "Ethane",
+		formula: "C₂H₆",
+		smiles: "CC",
+		grade: "Grade 8+",
+		groups: ["Organic basics"],
+	},
+	{
+		name: "Glucose",
+		formula: "C₆H₁₂O₆",
+		smiles: "C(C1C(C(C(C(O1)O)O)O)O)O",
+		grade: "Grade 9+",
+		groups: ["Biology", "Organic basics"],
+	},
+	{
+		name: "Carbon dioxide",
+		formula: "CO₂",
+		smiles: "O=C=O",
+		grade: "Grade 5+",
+		groups: ["Everyday", "Biology"],
+	},
+	{
+		name: "Methane",
+		formula: "CH₄",
+		smiles: "C",
+		grade: "Grade 6+",
+		groups: ["Everyday", "Organic basics"],
+	},
+	{
+		name: "Ethanol",
+		formula: "C₂H₆O",
+		smiles: "CCO",
+		grade: "Grade 9+",
+		groups: ["Everyday", "Organic basics"],
+	},
+	{
+		name: "Aspirin",
+		formula: "C₉H₈O₄",
+		smiles: "CC(=O)Oc1ccccc1C(=O)O",
+		grade: "Grade 11+",
+		groups: ["Everyday", "Medicine"],
+	},
+	{
+		name: "Benzene",
+		formula: "C₆H₆",
+		smiles: "c1ccccc1",
+		grade: "Grade 11+",
+		groups: ["Organic basics"],
+	},
+	{
+		name: "Ammonia",
+		formula: "NH₃",
+		smiles: "N",
+		grade: "Grade 7+",
+		groups: ["Everyday"],
+	},
+	{
+		name: "Dopamine",
+		formula: "C₈H₁₁NO₂",
+		smiles: "NCCc1ccc(O)c(O)c1",
+		grade: "Grade 11+",
+		groups: ["Biology", "Medicine"],
+	},
+	{
+		name: "Vitamin C",
+		formula: "C₆H₈O₆",
+		smiles: "C([C@@H]([C@@H]1C(=C(C(=O)O1)O)O)O)O",
+		grade: "Grade 9+",
+		groups: ["Everyday", "Biology", "Medicine"],
+	},
+	{
+		name: "Glycine",
+		formula: "C₂H₅NO₂",
+		smiles: "NCC(=O)O",
+		grade: "Grade 7+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Alanine",
+		formula: "C₃H₇NO₂",
+		smiles: "C[C@H](N)C(=O)O",
+		grade: "Grade 8+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Valine",
+		formula: "C₅H₁₁NO₂",
+		smiles: "CC(C)[C@H](N)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Leucine",
+		formula: "C₆H₁₃NO₂",
+		smiles: "CC(C)C[C@H](N)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Isoleucine",
+		formula: "C₆H₁₃NO₂",
+		smiles: "CC[C@H](C)[C@H](N)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Proline",
+		formula: "C₅H₉NO₂",
+		smiles: "OC(=O)[C@@H]1CCCN1",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Phenylalanine",
+		formula: "C₉H₁₁NO₂",
+		smiles: "N[C@@H](Cc1ccccc1)C(=O)O",
+		grade: "Grade 11+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Tryptophan",
+		formula: "C₁₁H₁₂N₂O₂",
+		smiles: "N[C@@H](Cc1c[nH]c2ccccc12)C(=O)O",
+		grade: "Grade 11+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Methionine",
+		formula: "C₅H₁₁NO₂S",
+		smiles: "CSCC[C@H](N)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Serine",
+		formula: "C₃H₇NO₃",
+		smiles: "N[C@@H](CO)C(=O)O",
+		grade: "Grade 8+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Threonine",
+		formula: "C₄H₉NO₃",
+		smiles: "C[C@@H](O)[C@H](N)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Cysteine",
+		formula: "C₃H₇NO₂S",
+		smiles: "N[C@@H](CS)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Tyrosine",
+		formula: "C₉H₁₁NO₃",
+		smiles: "N[C@@H](Cc1ccc(O)cc1)C(=O)O",
+		grade: "Grade 11+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Asparagine",
+		formula: "C₄H₈N₂O₃",
+		smiles: "N[C@@H](CC(N)=O)C(=O)O",
+		grade: "Grade 10+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Glutamine",
+		formula: "C₅H₁₀N₂O₃",
+		smiles: "N[C@@H](CCC(N)=O)C(=O)O",
+		grade: "Grade 10+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Aspartic acid",
+		formula: "C₄H₇NO₄",
+		smiles: "N[C@@H](CC(=O)O)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Glutamic acid",
+		formula: "C₅H₉NO₄",
+		smiles: "N[C@@H](CCC(=O)O)C(=O)O",
+		grade: "Grade 9+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Lysine",
+		formula: "C₆H₁₄N₂O₂",
+		smiles: "NCCCC[C@H](N)C(=O)O",
+		grade: "Grade 10+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Arginine",
+		formula: "C₆H₁₄N₄O₂",
+		smiles: "N[C@@H](CCCNC(=N)N)C(=O)O",
+		grade: "Grade 11+",
+		groups: ["Amino acids", "Biology"],
+	},
+	{
+		name: "Histidine",
+		formula: "C₆H₉N₃O₂",
+		smiles: "N[C@@H](Cc1c[nH]cn1)C(=O)O",
+		grade: "Grade 10+",
+		groups: ["Amino acids", "Biology"],
+	},
+];
+
+/** Design-page link that loads a molecule straight away. */
+export function moleculeHref(name: string, smiles: string): string {
+	const q = new URLSearchParams({ name, smiles });
+	return `/design/molecule?${q.toString()}`;
+}
+
+export const moleculeTryChips: { label: string; smiles: string }[] = [
+	{ label: "water", smiles: "O" },
+	{ label: "caffeine", smiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C" },
+	{ label: "CCO", smiles: "CCO" },
+	{ label: "c1ccccc1", smiles: "c1ccccc1" },
+];
+
 const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	{
 		key: "mol",
 		slug: "small-molecules",
 		name: "Small molecules",
-		kicker: "Micro model",
-		thumb: "Ball-and-stick render",
-		total: 48,
-		blurb: "Ball-and-stick models from a SMILES string or a common name.",
+		kicker: "Lithopane",
+		thumb: "Small molecules",
+		thumbSmiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
+		total: moleculeSamples.length,
+		blurb: "Small molecules, active compounds, and drugs, including the 20 amino acids, generated from SMILES or common name",
 		filters: filters([
 			"All",
 			"Everyday",
 			"Biology",
 			"Medicine",
 			"Organic basics",
+			"Amino acids",
 		]),
-		examples: examples([
-			["Water", "H₂O", "Grade 5+"],
-			["Caffeine", "C₈H₁₀N₄O₂", "Grade 9+"],
-			["Ethane", "C₂H₆", "Grade 8+"],
-			["Glucose", "C₆H₁₂O₆", "Grade 9+"],
-			["Carbon dioxide", "CO₂", "Grade 5+"],
-			["Methane", "CH₄", "Grade 6+"],
-			["Ethanol", "C₂H₆O", "Grade 9+"],
-			["Aspirin", "C₉H₈O₄", "Grade 11+"],
-			["Benzene", "C₆H₆", "Grade 11+"],
-			["Ammonia", "NH₃", "Grade 7+"],
-			["Dopamine", "C₈H₁₁NO₂", "Grade 11+"],
-			["Vitamin C", "C₆H₈O₆", "Grade 9+"],
-		]),
+		examples: moleculeSamples.map((m) => ({
+			name: m.name,
+			meta: m.formula,
+			tag: m.grade,
+			groups: m.groups,
+			smiles: m.smiles,
+			href: moleculeHref(m.name, m.smiles),
+		})),
 		designHref: "/design/molecule",
 	},
 	{
@@ -132,7 +387,6 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 			["Budding yeast", "Phase contrast", "Microbe"],
 			["Elodea chloroplasts", "Brightfield · 40×", "Plant"],
 		]),
-		designHref: "/design/cell-image",
 	},
 	{
 		key: "blot",
@@ -236,115 +490,9 @@ export const plantCsv: PlantCsvRow[] = (
 	] as [number, number, number][]
 ).map(([w, a, b]) => ({ w, a: a.toFixed(1), b: b.toFixed(1) }));
 
-// ─── Molecule library (Design your own → Small molecules) ──────────────────
-
-export interface MoleculeRecord {
-	key: string;
-	name: string;
-	formula: string;
-	smiles: string;
-	molarMass: string;
-	atoms: string;
-	bonds: string;
-	previewKind: "water" | "ethane";
-}
-
-export const moleculeLibrary: Record<string, MoleculeRecord> = {
-	ethane: {
-		key: "ethane",
-		name: "Ethane",
-		formula: "C₂H₆",
-		smiles: "CC",
-		molarMass: "30.07 g/mol",
-		atoms: "8 (2 C, 6 H)",
-		bonds: "7 single",
-		previewKind: "ethane",
-	},
-	ethanol: {
-		key: "ethanol",
-		name: "Ethanol",
-		formula: "C₂H₆O",
-		smiles: "CCO",
-		molarMass: "46.07 g/mol",
-		atoms: "9 (2 C, 1 O, 6 H)",
-		bonds: "8 single",
-		previewKind: "ethane",
-	},
-	ethylene: {
-		key: "ethylene",
-		name: "Ethylene",
-		formula: "C₂H₄",
-		smiles: "C=C",
-		molarMass: "28.05 g/mol",
-		atoms: "6 (2 C, 4 H)",
-		bonds: "5 (1 double, 4 single)",
-		previewKind: "ethane",
-	},
-	ethyne: {
-		key: "ethyne",
-		name: "Ethyne (acetylene)",
-		formula: "C₂H₂",
-		smiles: "C#C",
-		molarMass: "26.04 g/mol",
-		atoms: "4 (2 C, 2 H)",
-		bonds: "3 (1 triple, 2 single)",
-		previewKind: "ethane",
-	},
-	water: {
-		key: "water",
-		name: "Water",
-		formula: "H₂O",
-		smiles: "O",
-		molarMass: "18.02 g/mol",
-		atoms: "3 (1 O, 2 H)",
-		bonds: "2 single",
-		previewKind: "water",
-	},
-	caffeine: {
-		key: "caffeine",
-		name: "Caffeine",
-		formula: "C₈H₁₀N₄O₂",
-		smiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
-		molarMass: "194.19 g/mol",
-		atoms: "24",
-		bonds: "multiple ring bonds",
-		previewKind: "ethane",
-	},
-	benzene: {
-		key: "benzene",
-		name: "Benzene",
-		formula: "C₆H₆",
-		smiles: "c1ccccc1",
-		molarMass: "78.11 g/mol",
-		atoms: "12 (6 C, 6 H)",
-		bonds: "12 (aromatic ring)",
-		previewKind: "ethane",
-	},
-};
-
-/** Suggestions shown while typing "eth" — matches the design's screen 07. */
-export const moleculeSuggestionOrder = [
-	"ethane",
-	"ethanol",
-	"ethylene",
-	"ethyne",
-];
-
-export interface TryChip {
-	label: string;
-	moleculeKey: string;
-}
-
-export const moleculeTryChips: TryChip[] = [
-	{ label: "water", moleculeKey: "water" },
-	{ label: "caffeine", moleculeKey: "caffeine" },
-	{ label: "CCO", moleculeKey: "ethanol" },
-	{ label: "c1ccccc1", moleculeKey: "benzene" },
-];
-
 // ─── Print parameters (right-hand panel on every design screen) ────────────
 
-export type PrintSetKey = "mol" | "macro" | "cell" | "blot" | "plot" | "csv";
+export type PrintSetKey = "macro" | "cell" | "blot" | "plot" | "csv";
 
 export type ParamRow =
 	| {
@@ -430,19 +578,6 @@ export interface PrintParamSet {
 }
 
 export const printParamSets: Record<PrintSetKey, PrintParamSet> = {
-	mol: {
-		outputLabel: "Micro model",
-		estimate: "Est. 42 × 30 × 30 mm",
-		rows: [
-			seg("rep", "Representation", ["Ball-and-stick", "Space-fill"], 0),
-			range("size", "Model size", 40, "mm", 10, 120),
-			range("bond", "Bond diameter", 2.4, "mm", 1, 5, 0.1),
-			standardResolution,
-			toggle("base", "Base plate", true),
-			toggle("scale", "Scale bar", false),
-			braille("ethane"),
-		],
-	},
 	macro: {
 		outputLabel: "Micro model",
 		estimate: "Est. 80 × 62 × 55 mm",
