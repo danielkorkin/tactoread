@@ -2,10 +2,10 @@ import { CategoryCard } from "@/components/category-card";
 import { categories } from "@/lib/placeholder-data";
 
 const STEPS = [
-	{ n: "01", label: "Choose a subject" },
-	{ n: "02", label: "Load or upload" },
-	{ n: "03", label: "Tune for print" },
-	{ n: "04", label: "Download STL / OBJ" },
+	{ title: "Pick a subject", label: "Choose a category" },
+	{ title: "Load or upload", label: "Name, SMILES or file" },
+	{ title: "Preview", label: "Check the 3D model" },
+	{ title: "Download", label: "Get the STL and print" },
 ];
 
 export default function HomePage() {
@@ -17,18 +17,19 @@ export default function HomePage() {
 						Tactile models for the classroom
 					</div>
 					<h1 className="mt-1.5 mb-2.5 text-5xl leading-none sm:text-6xl">
-						Science you can hold.
+						Science you can feel.
 					</h1>
 					<p className="max-w-xl text-[17px] text-balance">
-						Turn molecules, proteins, micrographs, blots and charts
-						into models you can print and pass around the room.
+						Turn molecules, proteins, cell images, western blots,
+						and data into models you can print and pass around the
+						room.
 					</p>
 				</div>
 				<div className="grid grid-cols-2 gap-x-3 gap-y-4 border-t border-border pt-3 sm:grid-cols-4">
 					{STEPS.map((step) => (
-						<div key={step.n} className="flex flex-col gap-1">
-							<span className="font-mono text-xs font-medium text-accent-700">
-								{step.n}
+						<div key={step.title} className="flex flex-col gap-1">
+							<span className="font-heading text-base font-semibold text-accent-700">
+								{step.title}
 							</span>
 							<span className="text-sm">{step.label}</span>
 						</div>

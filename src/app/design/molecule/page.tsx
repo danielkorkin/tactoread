@@ -1,56 +1,110 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Blueprint, BlueprintCorners } from "@/components/blueprint";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	DialogDescription,
-} from "@/components/ui/dialog";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DesignShell } from "@/components/design-shell";
-import { PrintParams } from "@/components/print-params";
-import { Preview3D } from "@/components/preview-3d";
+import { StlPreview } from "@/components/stl-preview";
+import { downloadBuffer, fetchMoleculeStl, nameToSmiles } from "@/lib/api";
 import {
-	moleculeLibrary,
+	moleculeSamples,
 	moleculeTryChips,
-	type MoleculeRecord,
+	type MoleculeSample,
 } from "@/lib/placeholder-data";
 import { cn } from "@/lib/utils";
 
-function matchSuggestions(query: string): MoleculeRecord[] {
+interface LoadedMolecule {
+	name: string;
+	smiles: string;
+	stl: ArrayBuffer;
+}
+
+function matchSuggestions(query: string): MoleculeSample[] {
 	const q = query.trim().toLowerCase();
 	if (!q) return [];
-	return Object.values(moleculeLibrary)
+	return moleculeSamples
 		.filter((m) => m.name.toLowerCase().startsWith(q))
 		.slice(0, 6);
 }
 
-export default function MoleculeDesignPage() {
-	const [query, setQuery] = React.useState("eth");
+function MoleculeDesign({
+	linkedName,
+	linkedSmiles,
+}: {
+	linkedName: string | null;
+	linkedSmiles: string | null;
+}) {
+	const [query, setQuery] = React.useState(linkedName ?? linkedSmiles ?? "");
 	const [open, setOpen] = React.useState(false);
 	const [activeIndex, setActiveIndex] = React.useState(0);
-	const [loaded, setLoaded] = React.useState<MoleculeRecord | null>(null);
-	const [previewOpen, setPreviewOpen] = React.useState(false);
-	const [format, setFormat] = React.useState<"stl" | "obj">("stl");
-	const rep = "ball" as const;
+	const [loaded, setLoaded] = React.useState<LoadedMolecule | null>(null);
+	const [loading, setLoading] = React.useState(false);
+	const [error, setError] = React.useState<string | null>(null);
+	const [copied, setCopied] = React.useState(false);
+	const requestId = React.useRef(0);
 
 	const suggestions = matchSuggestions(query);
 
-	function loadMolecule(m: MoleculeRecord) {
-		setLoaded(m);
+	/** Resolve `input` (known SMILES, common name, or raw SMILES) and fetch the
+	 * lithopane STL from the backend. */
+	const load = React.useCallback(
+		async (input: string, knownSmiles?: string) => {
+			const text = input.trim();
+			if (!text) return;
+			const id = ++requestId.current;
+			setOpen(false);
+			setLoading(true);
+			setError(null);
+			setLoaded(null);
+			try {
+				// Not a sample: try it as a name, else assume it is a SMILES.
+				const smiles =
+					knownSmiles ?? (await nameToSmiles(text).catch(() => text));
+				const stl = await fetchMoleculeStl(smiles);
+				if (id !== requestId.current) return;
+				setLoaded({ name: text, smiles, stl });
+			} catch (e) {
+				if (id !== requestId.current) return;
+				setError(
+					e instanceof TypeError
+						? "Couldn't reach the server. Is the API running?"
+						: `Couldn't build a model for “${text}”. Check the name or SMILES.`,
+				);
+			} finally {
+				if (id === requestId.current) setLoading(false);
+			}
+		},
+		[],
+	);
+
+	// Library cards link here with ?name=…&smiles=… to load straight away.
+	React.useEffect(() => {
+		if (!linkedSmiles) return;
+		const timer = setTimeout(
+			() => void load(linkedName ?? linkedSmiles, linkedSmiles),
+		);
+		return () => clearTimeout(timer);
+	}, [linkedSmiles, linkedName, load]);
+
+	function pick(m: { name: string; smiles: string }) {
 		setQuery(m.name);
-		setOpen(false);
+		void load(m.name, m.smiles);
 	}
 
 	function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-		if (!open || suggestions.length === 0) return;
-		if (e.key === "ArrowDown") {
+		const listOpen = open && suggestions.length > 0;
+		if (e.key === "Enter") {
+			e.preventDefault();
+			if (listOpen) pick(suggestions[activeIndex]);
+			else void load(query);
+		} else if (!listOpen) {
+			return;
+		} else if (e.key === "ArrowDown") {
 			e.preventDefault();
 			setActiveIndex((i) => (i + 1) % suggestions.length);
 		} else if (e.key === "ArrowUp") {
@@ -58,62 +112,135 @@ export default function MoleculeDesignPage() {
 			setActiveIndex(
 				(i) => (i - 1 + suggestions.length) % suggestions.length,
 			);
-		} else if (e.key === "Enter") {
-			e.preventDefault();
-			loadMolecule(suggestions[activeIndex]);
 		} else if (e.key === "Escape") {
 			setOpen(false);
 		}
 	}
 
+	function copySmiles() {
+		if (!loaded) return;
+		void navigator.clipboard?.writeText(loaded.smiles).then(() => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1500);
+		});
+	}
+
+	const sidebar = (
+		<Blueprint className="flex h-full flex-col gap-3.5 p-4.5">
+			<div className="flex items-center justify-between">
+				<h4 className="m-0 text-base">Model</h4>
+				<Badge variant="accent">Lithopane</Badge>
+			</div>
+			{loaded ? (
+				<>
+					<div>
+						<div className="kicker">Loaded</div>
+						<h3 className="mt-0.5 mb-0 text-3xl break-words">
+							{loaded.name}
+						</h3>
+					</div>
+					<Table>
+						<TableBody>
+							<TableRow>
+								<TableCell className="text-muted-foreground">
+									SMILES
+								</TableCell>
+								<TableCell className="font-mono break-all">
+									{loaded.smiles}
+								</TableCell>
+							</TableRow>
+						</TableBody>
+					</Table>
+					<div className="mt-auto flex flex-col gap-2 border-t border-border pt-3.5">
+						<Button
+							blueprint
+							className="w-full"
+							onClick={() =>
+								downloadBuffer(
+									loaded.stl,
+									`${loaded.name.replace(/[^\w-]+/g, "_")}.stl`,
+								)
+							}
+						>
+							Download STL
+						</Button>
+						<Button variant="secondary" onClick={copySmiles}>
+							{copied ? "Copied" : "Copy SMILES"}
+						</Button>
+					</div>
+				</>
+			) : (
+				<p className="m-0 text-sm text-muted-foreground">
+					Load a molecule to see its details and download the model.
+				</p>
+			)}
+		</Blueprint>
+	);
+
 	return (
 		<DesignShell
-			breadcrumb="Library / Small molecules / Design your own"
-			title="Build a molecule"
-			params={<PrintParams set="mol" ready={!!loaded} />}
+			breadcrumb="Library / Small molecules / Create your own"
+			title="Build a lithopane of a molecule"
+			params={sidebar}
 		>
+			<p className="m-0 max-w-2xl text-sm text-muted-foreground">
+				A lithopane is a thin printed card with the molecule raised on
+				its surface, so you can read it by touch.{" "}
+				<Link href="/tutorial" className="text-primary underline">
+					How it works
+				</Link>
+			</p>
 			<div className="relative">
+				<label
+					htmlFor="molecule-input"
+					className="mb-1.5 block text-[13px] text-foreground/78"
+				>
+					Enter a SMILES string or a common name
+				</label>
 				<div className="flex gap-2">
 					<Input
+						id="molecule-input"
 						value={query}
 						onChange={(e) => {
 							setQuery(e.target.value);
 							setOpen(true);
 							setActiveIndex(0);
-							if (loaded && e.target.value !== loaded.name)
-								setLoaded(null);
+							setError(null);
 						}}
-						onFocus={() => setOpen(suggestions.length > 0)}
+						onFocus={() => setOpen(true)}
+						onBlur={() => setOpen(false)}
 						onKeyDown={onInputKeyDown}
-						placeholder="SMILES or common name"
+						placeholder="e.g. caffeine, or CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
 						aria-label="SMILES or common name"
+						autoComplete="off"
+						spellCheck={false}
 						className="h-[46px] flex-1 border-primary text-[17px]"
 					/>
 					<Button
 						blueprint
-						disabled={!loaded}
+						disabled={!query.trim() || loading}
 						className="h-[46px] px-5.5 text-base"
-						onClick={() => loaded && setLoaded(loaded)}
+						onClick={() => void load(query)}
 					>
-						Load molecule
+						{loading ? "Generating…" : "Load molecule"}
 					</Button>
 				</div>
 				{open && suggestions.length > 0 && (
 					<div
 						role="listbox"
-						className="blueprint absolute inset-x-0 top-[58px] right-40 z-20 flex flex-col bg-background shadow-md"
+						className="blueprint absolute inset-x-0 top-[84px] z-20 flex flex-col bg-background shadow-md"
 					>
 						<BlueprintCorners />
 						{suggestions.map((s, i) => {
 							const prefixLen = query.trim().length;
 							return (
 								<div
-									key={s.key}
+									key={s.name}
 									role="option"
 									aria-selected={i === activeIndex}
 									onMouseDown={(e) => {
 										e.preventDefault();
-										loadMolecule(s);
+										pick(s);
 									}}
 									onMouseEnter={() => setActiveIndex(i)}
 									className={cn(
@@ -129,7 +256,7 @@ export default function MoleculeDesignPage() {
 									<span className="font-mono text-[13px]">
 										{s.formula}
 									</span>
-									<span className="font-mono text-[13px] text-accent-700">
+									<span className="truncate font-mono text-[13px] text-accent-700">
 										{s.smiles}
 									</span>
 								</div>
@@ -142,7 +269,7 @@ export default function MoleculeDesignPage() {
 				)}
 			</div>
 
-			<div className="flex items-center gap-2 text-[13px]">
+			<div className="flex flex-wrap items-center gap-2 text-[13px]">
 				<span className="text-muted-foreground">Try</span>
 				{moleculeTryChips.map((chip) => (
 					<Badge
@@ -150,7 +277,7 @@ export default function MoleculeDesignPage() {
 						variant="outline"
 						className="cursor-pointer"
 						onClick={() =>
-							loadMolecule(moleculeLibrary[chip.moleculeKey])
+							pick({ name: chip.label, smiles: chip.smiles })
 						}
 					>
 						{chip.label}
@@ -159,222 +286,53 @@ export default function MoleculeDesignPage() {
 			</div>
 
 			{!loaded ? (
-				<Blueprint className="hatch-soft flex flex-1 items-center justify-center">
-					<span className="font-mono text-xs text-accent-700">
-						Pick a suggestion, then press Load molecule
+				<Blueprint className="hatch-soft flex min-h-[320px] flex-1 items-center justify-center p-6 text-center">
+					<span
+						role={error ? "alert" : "status"}
+						className={cn(
+							"font-mono text-xs",
+							error ? "text-destructive" : "text-accent-700",
+						)}
+					>
+						{error ??
+							(loading
+								? "Generating lithopane…"
+								: "Enter a name or SMILES, then press Load molecule")}
 					</span>
 				</Blueprint>
 			) : (
-				<div className="grid flex-1 grid-cols-1 gap-6 sm:grid-cols-[minmax(0,1fr)_300px]">
-					<figure className="blueprint m-0 flex flex-col">
+				<div className="flex flex-1 flex-col">
+					<figure className="blueprint relative m-0 flex min-h-[420px] flex-1 flex-col">
 						<BlueprintCorners />
-						<div className="hatch grid flex-1 place-items-center font-mono text-xs text-accent-700">
-							2D structure · {loaded.name.toLowerCase()} (
-							{loaded.smiles})
-						</div>
+						<StlPreview
+							data={loaded.stl}
+							className="min-h-0 flex-1"
+						/>
 						<figcaption className="m-0 border-t border-border px-3 py-2 text-xs text-muted-foreground">
-							Generated from SMILES · hydrogens shown
+							3D lithopane · drag to rotate
 						</figcaption>
 					</figure>
-					<div className="flex flex-col gap-4">
-						<div>
-							<div className="kicker">Loaded</div>
-							<h3 className="mt-0.5 mb-0 text-3xl">
-								{loaded.name}
-							</h3>
-						</div>
-						<Table>
-							<TableBody>
-								<TableRow>
-									<TableCell className="text-muted-foreground">
-										Formula
-									</TableCell>
-									<TableCell className="font-mono">
-										{loaded.formula}
-									</TableCell>
-								</TableRow>
-								<TableRow>
-									<TableCell className="text-muted-foreground">
-										Molar mass
-									</TableCell>
-									<TableCell>{loaded.molarMass}</TableCell>
-								</TableRow>
-								<TableRow>
-									<TableCell className="text-muted-foreground">
-										Atoms
-									</TableCell>
-									<TableCell>{loaded.atoms}</TableCell>
-								</TableRow>
-								<TableRow>
-									<TableCell className="text-muted-foreground">
-										Bonds
-									</TableCell>
-									<TableCell>{loaded.bonds}</TableCell>
-								</TableRow>
-								<TableRow>
-									<TableCell className="text-muted-foreground">
-										SMILES
-									</TableCell>
-									<TableCell className="font-mono">
-										{loaded.smiles}
-									</TableCell>
-								</TableRow>
-							</TableBody>
-						</Table>
-						<Button
-							blueprint
-							className="p-3 text-base"
-							onClick={() => setPreviewOpen(true)}
-						>
-							Open preview
-						</Button>
-						<Button
-							variant="secondary"
-							onClick={() => {
-								if (loaded)
-									void navigator.clipboard?.writeText(
-										loaded.smiles,
-									);
-							}}
-						>
-							Copy SMILES
-						</Button>
-					</div>
 				</div>
 			)}
-
-			<Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-				<DialogContent
-					className="p-7 sm:max-w-[1040px]"
-					showCloseButton={false}
-				>
-					{loaded && (
-						<div className="grid grid-cols-1 gap-7 sm:grid-cols-[minmax(0,1fr)_300px]">
-							<div className="blueprint relative h-[600px]">
-								<BlueprintCorners />
-								<Preview3D
-									kind={loaded.previewKind}
-									rep={rep}
-									base
-									className="h-full w-full"
-								/>
-								<Badge
-									variant="accent"
-									className="absolute top-3 left-3"
-								>
-									Ball-and-stick
-								</Badge>
-								<span className="absolute bottom-3 left-3 font-mono text-[11px] text-neutral-800">
-									Drag to rotate
-								</span>
-							</div>
-							<div className="flex flex-col gap-4">
-								<div className="flex items-start justify-between">
-									<div>
-										<div className="kicker">Preview</div>
-										<DialogTitle className="text-3xl">
-											{loaded.name}
-										</DialogTitle>
-										<DialogDescription className="sr-only">
-											Live 3D preview of {loaded.name}
-										</DialogDescription>
-									</div>
-									<Button
-										variant="secondary"
-										size="icon-sm"
-										aria-label="Close preview"
-										onClick={() => setPreviewOpen(false)}
-									>
-										✕
-									</Button>
-								</div>
-								<Table>
-									<TableBody>
-										<TableRow>
-											<TableCell className="text-muted-foreground">
-												Bounding box
-											</TableCell>
-											<TableCell>
-												42 × 30 × 30 mm
-											</TableCell>
-										</TableRow>
-										<TableRow>
-											<TableCell className="text-muted-foreground">
-												Bond diameter
-											</TableCell>
-											<TableCell>2.4 mm</TableCell>
-										</TableRow>
-										<TableRow>
-											<TableCell className="text-muted-foreground">
-												Base plate
-											</TableCell>
-											<TableCell>On</TableCell>
-										</TableRow>
-										<TableRow>
-											<TableCell className="text-muted-foreground">
-												Braille
-											</TableCell>
-											<TableCell className="text-xl leading-none">
-												⠑⠞⠓⠁⠝⠑
-											</TableCell>
-										</TableRow>
-									</TableBody>
-								</Table>
-								<div className="mt-auto flex flex-col gap-2.5">
-									<span className="text-[13px]">
-										Export format
-									</span>
-									<ToggleGroup
-										variant="outline"
-										spacing={0}
-										className="w-full"
-										value={[format]}
-										onValueChange={(v: string[]) => {
-											if (v.length)
-												setFormat(
-													v[v.length - 1] as
-														"stl" | "obj",
-												);
-										}}
-									>
-										<ToggleGroupItem
-											value="stl"
-											className="flex-1 justify-center"
-										>
-											STL
-										</ToggleGroupItem>
-										<ToggleGroupItem
-											value="obj"
-											className="flex-1 justify-center"
-										>
-											OBJ
-										</ToggleGroupItem>
-									</ToggleGroup>
-									<Button
-										blueprint
-										className="p-3 text-base"
-										onClick={() =>
-											console.info(
-												"[placeholder] download",
-												loaded.key,
-												format,
-											)
-										}
-									>
-										Download model
-									</Button>
-									<Button
-										variant="secondary"
-										onClick={() => setPreviewOpen(false)}
-									>
-										Back to parameters
-									</Button>
-								</div>
-							</div>
-						</div>
-					)}
-				</DialogContent>
-			</Dialog>
 		</DesignShell>
+	);
+}
+
+function LinkedMoleculeDesign() {
+	const params = useSearchParams();
+	return (
+		<MoleculeDesign
+			key={params.toString()}
+			linkedName={params.get("name")}
+			linkedSmiles={params.get("smiles")}
+		/>
+	);
+}
+
+export default function MoleculeDesignPage() {
+	return (
+		<React.Suspense>
+			<LinkedMoleculeDesign />
+		</React.Suspense>
 	);
 }

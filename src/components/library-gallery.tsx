@@ -20,7 +20,8 @@ export function LibraryGallery({ category }: { category: Category }) {
 			example.name.toLowerCase().includes(query.trim().toLowerCase());
 		const matchesFilter =
 			activeFilter === "All" ||
-			example.tag.toLowerCase().includes(activeFilter.toLowerCase());
+			example.tag.toLowerCase().includes(activeFilter.toLowerCase()) ||
+			(example.groups?.includes(activeFilter) ?? false);
 		return matchesQuery && matchesFilter;
 	});
 
@@ -42,14 +43,16 @@ export function LibraryGallery({ category }: { category: Category }) {
 					onChange={(e) => setQuery(e.target.value)}
 					className="w-full sm:w-60"
 				/>
-				<Button
-					blueprint
-					nativeButton={false}
-					className="h-10 shrink-0 px-5 text-base"
-					render={<Link href={category.designHref} />}
-				>
-					Design your own
-				</Button>
+				{category.designHref && (
+					<Button
+						blueprint
+						nativeButton={false}
+						className="h-10 shrink-0 px-5 text-base"
+						render={<Link href={category.designHref} />}
+					>
+						Create your own
+					</Button>
+				)}
 			</div>
 			<div className="flex flex-wrap items-center gap-2">
 				{category.filters.map((f) => (
