@@ -425,22 +425,22 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		name: "Data science plots",
 		kicker: "Tactile relief",
 		thumb: "Chart",
-		total: 30,
-		blurb: "Upload a chart image, or build a graph from a CSV. Lines, bars and points are printed raised.",
-		filters: filters(["All", "Line", "Bar", "Scatter", "Distribution"]),
+		total: 12,
+		blurb: "Build a bar chart, donut chart or scatter plot from your own numbers or a CSV file. The chart is printed raised, with braille labels.",
+		filters: filters(["All", "Bar", "Donut", "Scatter"]),
 		examples: examples([
-			["Population growth", "Line · logistic", "Biology"],
-			["Predator–prey cycles", "Line · 2 series", "Ecology"],
-			["Enzyme kinetics", "Line · Michaelis–Menten", "Chemistry"],
-			["Normal distribution", "Histogram", "Math"],
-			["Height vs. arm span", "Scatter", "Math"],
-			["Plant growth: sun vs. shade", "Bar · 2 series", "Biology"],
-			["Titration curve", "Line", "Chemistry"],
-			["Light vs. photosynthesis", "Line", "Biology"],
-			["Global temperature", "Line · 1880–2020", "Earth science"],
+			["Plant growth: sun vs. shade", "Bar", "Biology"],
 			["Blood type frequency", "Bar", "Biology"],
-			["Test scores", "Box plot", "Math"],
-			["Half-life decay", "Line · exponential", "Physics"],
+			["Average monthly rainfall", "Bar", "Earth science"],
+			["Test scores", "Bar", "Math"],
+			["Class favourite pets", "Donut", "Everyday"],
+			["Gases in the air", "Donut", "Chemistry"],
+			["Where water is on Earth", "Donut", "Earth science"],
+			["A day in the life", "Donut", "Everyday"],
+			["Height vs. arm span", "Scatter", "Math"],
+			["Study time vs. score", "Scatter", "Everyday"],
+			["Cricket chirps vs. temperature", "Scatter", "Biology"],
+			["Light vs. photosynthesis", "Scatter", "Biology"],
 		]),
 		designHref: "/design/plot",
 	},
@@ -473,26 +473,9 @@ export const blotLanes: BlotLane[] = [
 	["L7", "siRNA 80 nM", "0.06"],
 ].map(([id, label, val]) => ({ id, label, val }));
 
-export interface PlantCsvRow {
-	w: number;
-	a: string;
-	b: string;
-}
-
-export const plantCsv: PlantCsvRow[] = (
-	[
-		[1, 2.1, 1.5],
-		[2, 3.4, 2.0],
-		[3, 4.8, 2.7],
-		[4, 5.9, 3.1],
-		[5, 6.7, 3.6],
-		[6, 8.0, 4.0],
-	] as [number, number, number][]
-).map(([w, a, b]) => ({ w, a: a.toFixed(1), b: b.toFixed(1) }));
-
 // ─── Print parameters (right-hand panel on every design screen) ────────────
 
-export type PrintSetKey = "macro" | "cell" | "blot" | "plot" | "csv";
+export type PrintSetKey = "macro" | "cell" | "blot";
 
 export type ParamRow =
 	| {
@@ -559,18 +542,6 @@ const standardResolution = seg(
 	1,
 );
 
-function reliefRows(label: string, text: string, height: number): ParamRow[] {
-	return [
-		range("size", "Panel width", 120, "mm", 50, 200),
-		range("relief", label, height, "mm", 0.4, 4, 0.1),
-		toggle("inv", "Invert (lithophane)", false),
-		standardResolution,
-		toggle("base", "Base plate", true),
-		toggle("scale", "Axis tick marks", true),
-		braille(text),
-	];
-}
-
 export interface PrintParamSet {
 	outputLabel: string;
 	estimate: string;
@@ -617,15 +588,5 @@ export const printParamSets: Record<PrintSetKey, PrintParamSet> = {
 			toggle("scale", "Lane numbers", true),
 			braille("p53 knockdown"),
 		],
-	},
-	plot: {
-		outputLabel: "Tactile relief",
-		estimate: "Est. 120 × 90 × 2.8 mm",
-		rows: reliefRows("Relief height", "population", 1.6),
-	},
-	csv: {
-		outputLabel: "Tactile relief",
-		estimate: "Est. 120 × 90 × 2.8 mm",
-		rows: reliefRows("Relief height", "plant growth", 1.6),
 	},
 };

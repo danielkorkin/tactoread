@@ -4,8 +4,7 @@ import * as React from "react";
 import * as THREE from "three";
 import { cn } from "@/lib/utils";
 
-export type PreviewKind =
-	"water" | "ethane" | "protein" | "cells" | "blot" | "plot" | "bars";
+export type PreviewKind = "water" | "ethane" | "protein" | "cells" | "blot";
 
 export interface Preview3DProps {
 	kind: PreviewKind;
@@ -218,74 +217,26 @@ function heightFn(kind: PreviewKind): (u: number, v: number) => number {
 			return Math.min(1, h);
 		};
 	}
-	if (kind === "blot") {
-		const L: number[] = [];
-		for (let i = 0; i < 7; i++) L.push(0.13 + i * (0.74 / 6));
-		const ladder = [0.18, 0.3, 0.42, 0.54, 0.66, 0.8];
-		const kd = [0, 0.95, 0.75, 0.55, 0.35, 0.18, 0.06];
-		return (u, v) => {
-			let h = 0.04;
-			L.forEach((c, i) => {
-				const gx = Math.exp(-(((u - c) / 0.042) ** 6));
-				if (gx < 0.01) return;
-				const bands =
-					i === 0
-						? ladder.map((y) => [y, 0.6])
-						: [
-								[0.72, 0.85],
-								[0.4, kd[i]],
-							];
-				for (const [y, a] of bands)
-					h += a * gx * Math.exp(-(((v - y) / 0.016) ** 2));
-			});
-			return Math.min(1, h);
-		};
-	}
-	const axes = (u: number, v: number) =>
-		(u > 0.09 && u < 0.102 && v > 0.1 && v < 0.9) ||
-		(v > 0.09 && v < 0.105 && u > 0.1 && u < 0.93);
-	if (kind === "plot") {
-		const f = (x: number) => 0.14 + 0.7 / (1 + Math.exp(-(x - 0.52) * 13));
-		const df = (x: number) => {
-			const e = Math.exp(-(x - 0.52) * 13);
-			return (0.7 * 13 * e) / (1 + e) ** 2;
-		};
-		return (u, v) => {
-			let h = axes(u, v) ? 1 : 0;
-			for (let k = 1; k < 5; k++)
-				if (
-					Math.abs(v - (0.1 + k * 0.19)) < 0.003 &&
-					u > 0.1 &&
-					u < 0.92
-				)
-					h = Math.max(h, 0.25);
-			if (u > 0.12 && u < 0.92) {
-				const d =
-					Math.abs(v - f(u)) / Math.sqrt(1 + (df(u) / 1.33) ** 2);
-				if (d < 0.008) h = Math.max(h, 0.85);
-			}
-			for (let x = 0.16; x < 0.92; x += 0.07)
-				if (Math.hypot((u - x) * 1.33, v - f(x)) < 0.018) h = 1;
-			return h;
-		};
-	}
-	const D = [0.22, 0.34, 0.47, 0.58, 0.66, 0.79];
-	const D2 = [0.15, 0.2, 0.27, 0.31, 0.36, 0.4];
+	const L: number[] = [];
+	for (let i = 0; i < 7; i++) L.push(0.13 + i * (0.74 / 6));
+	const ladder = [0.18, 0.3, 0.42, 0.54, 0.66, 0.8];
+	const kd = [0, 0.95, 0.75, 0.55, 0.35, 0.18, 0.06];
 	return (u, v) => {
-		let h = axes(u, v) ? 1 : 0;
-		D.forEach((d, i) => {
-			const x0 = 0.15 + i * 0.13;
-			if (u > x0 && u < x0 + 0.05 && v > 0.11 && v < 0.11 + d * 0.78)
-				h = 1;
-			if (
-				u > x0 + 0.055 &&
-				u < x0 + 0.105 &&
-				v > 0.11 &&
-				v < 0.11 + D2[i] * 0.78
-			)
-				h = 0.55;
+		let h = 0.04;
+		L.forEach((c, i) => {
+			const gx = Math.exp(-(((u - c) / 0.042) ** 6));
+			if (gx < 0.01) return;
+			const bands =
+				i === 0
+					? ladder.map((y) => [y, 0.6])
+					: [
+							[0.72, 0.85],
+							[0.4, kd[i]],
+						];
+			for (const [y, a] of bands)
+				h += a * gx * Math.exp(-(((v - y) / 0.016) ** 2));
 		});
-		return h;
+		return Math.min(1, h);
 	};
 }
 
@@ -315,7 +266,7 @@ function buildLitho(kind: PreviewKind, invert: boolean) {
 	return grp;
 }
 
-const LITHO_KINDS: PreviewKind[] = ["cells", "blot", "plot", "bars"];
+const LITHO_KINDS: PreviewKind[] = ["cells", "blot"];
 
 /**
  * Live, drag-to-rotate 3D preview. Client-only (WebGL); ported from the

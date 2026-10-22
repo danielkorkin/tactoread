@@ -120,10 +120,10 @@ def smiles_to_name(smiles: str):
         return ""
 
 
-@app.route("/api/data/donut", methods=["GET"])
+@app.route("/api/data/donut", methods=["GET", "POST"])
 def data_science_donut():
     # _TYPES = ["donut", "bar", "scatter"]
-    data = request.json()
+    data = request.get_json(silent=True) or {}
 
     title = data.get("title", "Donut Chart")
 
@@ -140,7 +140,10 @@ def data_science_donut():
         else:
             return jsonify({"error": "Values of a donut should be a list of numbers"})
 
-    stl = chart_card_stl("donut", values, title)
+    try:
+        stl = chart_card_stl("donut", values, title)
+    except (ValueError, KeyError) as e:
+        return jsonify({"error": str(e)}), 400
     outpath = create_temp(stl)
 
     @after_this_request
@@ -156,10 +159,10 @@ def data_science_donut():
     )
 
 
-@app.route("/api/data/donut/key", methods=["GET"])
+@app.route("/api/data/donut/key", methods=["GET", "POST"])
 def data_science_donut_key():
     # _TYPES = ["donut", "bar", "scatter"]
-    data = request.json()
+    data = request.get_json(silent=True) or {}
     title = data.get("title", "Donut Key Chart")
     keys = data.get("keys")
 
@@ -187,7 +190,10 @@ def data_science_donut_key():
         else:
             return jsonify({"error": "Values of a donut should be a list of numbers"})
 
-    stl = key_card_stl(key_lines(keys, values), title)
+    try:
+        stl = key_card_stl(key_lines(keys, values), title)
+    except (ValueError, KeyError) as e:
+        return jsonify({"error": str(e)}), 400
     outpath = create_temp(stl)
 
     @after_this_request
@@ -203,10 +209,10 @@ def data_science_donut_key():
     )
 
 
-@app.route("/api/data/bar", methods=["GET"])
+@app.route("/api/data/bar", methods=["GET", "POST"])
 def data_science_bar():
     # _TYPES = ["donut", "bar", "scatter"]
-    data = request.json()
+    data = request.get_json(silent=True) or {}
 
     title = data.get("title", "Bar Chart")
 
@@ -223,7 +229,10 @@ def data_science_bar():
         else:
             return jsonify({"error": "Values of a donut should be a list of numbers"})
 
-    stl = chart_card_stl("bar", values, title)
+    try:
+        stl = chart_card_stl("bar", values, title)
+    except (ValueError, KeyError) as e:
+        return jsonify({"error": str(e)}), 400
     outpath = create_temp(stl)
 
     @after_this_request
@@ -239,10 +248,10 @@ def data_science_bar():
     )
 
 
-@app.route("/api/data/scatter", methods=["GET"])
+@app.route("/api/data/scatter", methods=["GET", "POST"])
 def data_science_scatter():
     # _TYPES = ["donut", "bar", "scatter"]
-    data = request.json()
+    data = request.get_json(silent=True) or {}
 
     title = data.get("title", "Scatter Plot")
 
@@ -263,13 +272,18 @@ def data_science_scatter():
     if not isinstance(trendline, bool):
         return jsonify({"error": "Trendline either true or false"})
 
-    max_value = max(values)
-    min_value = min(values)
-    range_value = max_value - min_value
-    step = round(range_value / 12)
-    calculated_x_values = list(range(min_value, max_value + step, step))
+    x_values = data.get("x_values")
+    if x_values is None:
+        x_values = list(range(1, len(values) + 1))
+    elif not isinstance(x_values, list) or not all(
+        isinstance(v, (int, float)) and not isinstance(v, bool) for v in x_values
+    ):
+        return jsonify({"error": "x_values should be a list of numbers"}), 400
 
-    stl = chart_card_stl("scatter", values, title, calculated_x_values, trendline)
+    try:
+        stl = chart_card_stl("scatter", values, title, x_values, trendline)
+    except (ValueError, KeyError) as e:
+        return jsonify({"error": str(e)}), 400
     outpath = create_temp(stl)
 
     @after_this_request
