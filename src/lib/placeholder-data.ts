@@ -354,7 +354,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		thumb: "Small molecules",
 		thumbSmiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
 		total: moleculeSamples.length,
-		blurb: "Small molecules, active compounds, and drugs, including the 20 amino acids, generated from SMILES or common name",
+		blurb: "Ball-and-stick models of small molecules, active compounds, and drugs, including the 20 amino acids, generated from SMILES or a common chemical name.",
 		filters: filters([
 			"All",
 			"Everyday",
@@ -381,7 +381,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		kicker: "Micro model",
 		thumb: "Protein cartoon render",
 		total: proteinSamples.length,
-		blurb: "Proteins and nucleic acids from the Protein Data Bank, found by name or PDB ID, with any chain you pick.",
+		blurb: "Proteins and nucleic acids loaded from a PDB ID or protein name, with any chain you pick.",
 		filters: filters([
 			"All",
 			"Blood",
@@ -407,7 +407,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		kicker: "Lithophane",
 		thumb: "Micrograph",
 		total: 40,
-		blurb: "Micrographs made into lithophanes. Hold one to the light and the structure shows through.",
+		blurb: "Microscopy images made into lithophanes.",
 		filters: filters([
 			"All",
 			"Plant",
@@ -435,10 +435,10 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		image: "https://storage.tactoread.org/images/western_blot.png",
 		slug: "western-blots",
 		name: "Western blots",
-		kicker: "Tactile relief",
+		kicker: "Lithophane",
 		thumb: "Blot scan",
 		total: 18,
-		blurb: "Lanes and bands are found automatically, then printed as raised relief you can read by touch.",
+		blurb: "Lanes and bands are found automatically, then printed as a lithophane you can read by touch.",
 		filters: filters([
 			"All",
 			"Loading controls",
@@ -467,7 +467,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		image: "https://storage.tactoread.org/images/Logo_DS.svg",
 		slug: "data-plots",
 		name: "Data science plots",
-		kicker: "Tactile relief",
+		kicker: "Lithophane",
 		thumb: "Chart",
 		total: 12,
 		blurb: "Build a bar chart, donut chart or scatter plot from your own numbers or a CSV file. The chart is printed raised, with braille labels.",

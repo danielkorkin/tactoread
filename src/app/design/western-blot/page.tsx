@@ -23,7 +23,7 @@ export default function WesternBlotDesignPage() {
 	return (
 		<DesignShell
 			breadcrumb="Library / Western blots / Create your own"
-			title="Blot to tactile relief"
+			title="Blot to lithophane"
 			params={<PrintParams set="blot" ready={ready} />}
 		>
 			<UploadBar
