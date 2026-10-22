@@ -14,14 +14,16 @@ except ImportError:  # run directly as a script
 AXIS_W = 1.6  # axes and bar baseline
 AXIS_H = 2.0
 BAR_H = 1.5  # bars sit lower than their baseline so it stays easy to find
+RIM_W = 1.2  # width of the ridge that outlines each bar
 POINT_D = 3.0  # scatter point
 POINT_H = 2.0
 TREND_W = 1.0  # dashed trendline: thinner and lower than the axes
 TREND_H = 1.2
 DASH, DASH_GAP = 3.0, 2.0
-TEX_H = 1.2  # donut segment textures
+TEX_H = 1.2  # donut segment and bar textures
 TEX_PITCH = 2.5
 TEX_W = 1.0  # texture line width / dot diameter
+N_TEXTURES = 5  # dots, horizontal, vertical, diagonal, grid
 EDGE = 0.6  # sloped rim of filled shapes (bars, donut segments)
 R_OUT, R_IN = 13.5, 7.0  # donut ring
 SEG_GAP = 1.5  # bare floor between donut segments
@@ -103,10 +105,20 @@ def _ridges(xs, ys, segs, width, height):
 
 
 def _texture(gx, gy, kind):
-    """0 = dots, 1 = horizontal lines, 2 = vertical lines."""
+    """0 = dots, 1 = horizontal lines, 2 = vertical lines, 3 = diagonal lines, 4 = grid."""
     dx = np.mod(gx, TEX_PITCH) - TEX_PITCH / 2
     dy = np.mod(gy, TEX_PITCH) - TEX_PITCH / 2
-    d = (np.hypot(dx, dy), np.abs(dy), np.abs(dx))[kind]
+    period = TEX_PITCH * math.sqrt(
+        2
+    )  # along x+y, so diagonal lines are TEX_PITCH apart
+    diag = np.abs(np.mod(gx + gy, period) - period / 2) / math.sqrt(2)
+    d = (
+        np.hypot(dx, dy),
+        np.abs(dy),
+        np.abs(dx),
+        diag,
+        np.minimum(np.abs(dx), np.abs(dy)),
+    )[kind]
     return _profile(TEX_W / 2 - d, TEX_W / 2, TEX_H)
 
 
@@ -153,7 +165,7 @@ def _donut(xs, ys, values):
 
 
 def _bar(xs, ys, values):
-    """Solid bars standing on a baseline ridge, numbered underneath."""
+    """Outlined bars, each filled with its own texture, on a baseline ridge, numbered underneath."""
     slot = (X1 - X0) / len(values)
     base = Y0 + LINE_H + LABEL_GAP + AXIS_W / 2  # baseline just above the numbers
     foot, width = base + AXIS_W / 2, min(0.6 * slot, 14.0)
@@ -173,7 +185,12 @@ def _bar(xs, ys, values):
         inside = np.minimum.reduce(
             [gx - cx + width / 2, cx + width / 2 - gx, gy - base, top - gy]
         )
-        h = np.maximum(h, _profile(inside, EDGE, BAR_H))
+        # Rounded outline ridge along the bar's edge, texture filling the inside
+        rim = _profile(RIM_W / 2 - np.abs(inside - RIM_W / 2), RIM_W / 2, BAR_H)
+        fill = np.minimum(
+            _texture(gx, gy, i % N_TEXTURES), _profile(inside - RIM_W, EDGE, TEX_H)
+        )
+        h = np.maximum(h, np.maximum(rim, fill))
         numbers.append((str(i), cx - NUM_W / 2, Y0))
     return h, numbers
 
