@@ -17,6 +17,8 @@ export interface ExampleItem {
 	smiles?: string;
 	/** Data science: the chart drawn as the card's thumbnail. */
 	chart?: { kind: ChartKind; title: string; rows: DataRow[] };
+	/** Macromolecules: PDB entry whose thumbnail the card shows. */
+	pdbId?: string;
 	/** Where clicking the card goes. */
 	href?: string;
 }
@@ -303,6 +305,43 @@ export const moleculeTryChips: { label: string; smiles: string }[] = [
 	{ label: "c1ccccc1", smiles: "c1ccccc1" },
 ];
 
+// ─── Protein samples (library cards + Create your own) ─────────────────────
+
+export interface ProteinSample {
+	name: string;
+	pdbId: string;
+	/** Chain to preselect; omitted means all chains. */
+	chain?: string;
+	tag: string;
+}
+
+export const proteinSamples: ProteinSample[] = [
+	{ name: "Hemoglobin", pdbId: "4HHB", tag: "Blood" },
+	{ name: "Insulin", pdbId: "4INS", tag: "Hormone" },
+	{ name: "Myoglobin", pdbId: "1MBN", tag: "Muscle" },
+	{ name: "Lysozyme", pdbId: "1LYZ", tag: "Enzyme" },
+	{ name: "Serum albumin", pdbId: "1AO6", chain: "A", tag: "Blood" },
+	{ name: "Collagen", pdbId: "1CAG", tag: "Structural" },
+	{ name: "p53 core domain", pdbId: "1TUP", chain: "A", tag: "Signaling" },
+	{ name: "Rhodopsin", pdbId: "1F88", chain: "A", tag: "Vision" },
+	{ name: "Green fluorescent protein", pdbId: "1EMA", tag: "Reporter" },
+	{ name: "Ubiquitin", pdbId: "1UBQ", tag: "Signaling" },
+	{ name: "DNA double helix", pdbId: "1BNA", tag: "DNA" },
+	{ name: "Antibody (IgG)", pdbId: "1IGT", chain: "A", tag: "Immune" },
+];
+
+/** Design-page link that loads a protein straight away. */
+export function proteinHref(p: {
+	pdbId: string;
+	name?: string;
+	chain?: string;
+}): string {
+	const q = new URLSearchParams({ pdb: p.pdbId });
+	if (p.name) q.set("name", p.name);
+	if (p.chain) q.set("chain", p.chain);
+	return `/design/macromolecule?${q.toString()}`;
+}
+
 const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	{
 		key: "mol",
@@ -337,30 +376,23 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		name: "Macromolecules",
 		kicker: "Micro model",
 		thumb: "Protein cartoon render",
-		total: 36,
-		blurb: "Proteins and nucleic acids from the human body, loaded from a sequence, UniProt or PDB ID.",
+		total: proteinSamples.length,
+		blurb: "Proteins and nucleic acids from the Protein Data Bank, found by name or PDB ID, with any chain you pick.",
 		filters: filters([
 			"All",
 			"Blood",
-			"Hormones",
-			"Structural",
-			"Enzymes",
-			"DNA & RNA",
+			"Hormone",
+			"Enzyme",
+			"Signaling",
+			"DNA",
 		]),
-		examples: examples([
-			["Hemoglobin", "PDB 4HHB", "Blood"],
-			["Insulin", "UniProt P01308", "Hormone"],
-			["Serum albumin", "UniProt P02768", "Blood"],
-			["Collagen I", "UniProt P02452", "Structural"],
-			["Myoglobin", "UniProt P02144", "Muscle"],
-			["Keratin 14", "UniProt P02533", "Structural"],
-			["Lysozyme", "UniProt P61626", "Enzyme"],
-			["β-actin", "UniProt P60709", "Structural"],
-			["p53", "UniProt P04637", "Signaling"],
-			["Rhodopsin", "UniProt P08100", "Vision"],
-			["CFTR", "UniProt P13569", "Channel"],
-			["DNA double helix", "PDB 1BNA", "DNA"],
-		]),
+		examples: proteinSamples.map((p) => ({
+			name: p.name,
+			meta: `PDB ${p.pdbId}`,
+			tag: p.tag,
+			pdbId: p.pdbId,
+			href: proteinHref(p),
+		})),
 		designHref: "/design/macromolecule",
 	},
 	{
@@ -473,7 +505,7 @@ export const blotLanes: BlotLane[] = [
 
 // ─── Print parameters (right-hand panel on every design screen) ────────────
 
-export type PrintSetKey = "macro" | "cell" | "blot";
+export type PrintSetKey = "cell" | "blot";
 
 export type ParamRow =
 	| {
@@ -547,19 +579,6 @@ export interface PrintParamSet {
 }
 
 export const printParamSets: Record<PrintSetKey, PrintParamSet> = {
-	macro: {
-		outputLabel: "Micro model",
-		estimate: "Est. 80 × 62 × 55 mm",
-		rows: [
-			seg("rep", "Representation", ["Cartoon", "Surface", "Backbone"], 0),
-			range("size", "Model size", 80, "mm", 20, 200),
-			range("tube", "Ribbon thickness", 3, "mm", 1, 6, 0.1),
-			range("smooth", "Smoothing", 60, "%", 0, 100),
-			toggle("base", "Base plate", true),
-			toggle("scale", "Scale bar", true),
-			braille("insulin"),
-		],
-	},
 	cell: {
 		outputLabel: "Lithophane",
 		estimate: "Est. 120 × 90 × 3.2 mm",

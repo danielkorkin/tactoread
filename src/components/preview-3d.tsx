@@ -4,7 +4,7 @@ import * as React from "react";
 import * as THREE from "three";
 import { cn } from "@/lib/utils";
 
-export type PreviewKind = "water" | "ethane" | "protein" | "cells" | "blot";
+export type PreviewKind = "water" | "ethane" | "cells" | "blot";
 
 export interface Preview3DProps {
 	kind: PreviewKind;
@@ -96,89 +96,6 @@ function buildMolecule(kind: PreviewKind, rep?: "ball" | "space") {
 			group.add(m);
 		});
 	}
-	return group;
-}
-
-function buildProtein() {
-	const r = rng(11);
-	const V = THREE.Vector3;
-	const pts: THREE.Vector3[] = [];
-	let p = new V();
-	const dir = new V(1, 0.2, 0).normalize();
-	const side = () => {
-		const up = Math.abs(dir.y) > 0.9 ? new V(1, 0, 0) : new V(0, 1, 0);
-		return up.clone().cross(dir).normalize();
-	};
-	const segs: [string, number][] = [
-		["h", 15],
-		["l", 5],
-		["s", 6],
-		["l", 4],
-		["h", 11],
-		["l", 6],
-		["h", 13],
-		["l", 4],
-		["s", 6],
-		["l", 5],
-		["h", 9],
-	];
-	for (const [t, n] of segs) {
-		if (t === "h") {
-			const u = side();
-			const v = dir.clone().cross(u).normalize();
-			for (let i = 0; i < n; i++) {
-				const a = i * 1.745;
-				pts.push(
-					p
-						.clone()
-						.addScaledVector(dir, i * 1.5)
-						.addScaledVector(u, 2.3 * Math.cos(a))
-						.addScaledVector(v, 2.3 * Math.sin(a)),
-				);
-			}
-			p = p.clone().addScaledVector(dir, n * 1.5);
-		} else if (t === "s") {
-			const u = side();
-			for (let i = 0; i < n; i++) {
-				pts.push(
-					p
-						.clone()
-						.addScaledVector(dir, i * 3.3)
-						.addScaledVector(u, i % 2 ? 0.9 : -0.9),
-				);
-			}
-			p = p.clone().addScaledVector(dir, n * 3.3);
-		} else {
-			for (let i = 0; i < n; i++) {
-				dir.add(
-					new V(r() - 0.5, r() - 0.5, r() - 0.5).multiplyScalar(1.4),
-				)
-					.addScaledVector(p, -0.03)
-					.normalize();
-				p = p.clone().addScaledVector(dir, 3.6);
-				pts.push(p.clone());
-			}
-		}
-	}
-	const group = new THREE.Group();
-	const m = mat(0x5980a6, 0.45);
-	group.add(
-		new THREE.Mesh(
-			new THREE.TubeGeometry(
-				new THREE.CatmullRomCurve3(pts),
-				pts.length * 8,
-				0.85,
-				14,
-				false,
-			),
-			m,
-		),
-	);
-	[pts[0], pts[pts.length - 1]].forEach((q) => {
-		const s = new THREE.Mesh(new THREE.SphereGeometry(0.85, 20, 14), m);
-		s.position.copy(q);
-		group.add(s);
-	});
 	return group;
 }
 
@@ -308,12 +225,9 @@ export function Preview3D({
 		d2.position.set(4, -2, -3);
 		scene.add(d2);
 
-		const obj =
-			kind === "protein"
-				? buildProtein()
-				: isLitho
-					? buildLitho(kind, invert)
-					: buildMolecule(kind, rep);
+		const obj = isLitho
+			? buildLitho(kind, invert)
+			: buildMolecule(kind, rep);
 
 		const box = new THREE.Box3().setFromObject(obj);
 		if (base && !isLitho) {

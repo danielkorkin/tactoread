@@ -9,7 +9,7 @@ from data_science import chart_card_stl, key_card_stl, key_lines
 from flask import Flask, after_this_request, jsonify, request, send_file
 from molec import molecule_card_stl
 from protein import build_model, build_tag, parse
-from rcsbsearchapi.search import TextQuery
+from rcsbapi.search import TextQuery
 from util import create_temp, delete_temp
 
 app = Flask(__name__)

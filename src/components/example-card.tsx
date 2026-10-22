@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Blueprint } from "@/components/blueprint";
 import { Badge } from "@/components/ui/badge";
 import { ChartPreview } from "@/components/plot/chart-preview";
-import { smilesToImageUrl } from "@/lib/api";
+import { pdbImageUrl, smilesToImageUrl } from "@/lib/api";
 import { validateChart } from "@/lib/charts";
 import type { ExampleItem } from "@/lib/placeholder-data";
 
@@ -17,7 +17,12 @@ export function ExampleCard({
 	thumb: string;
 }) {
 	const [imageFailed, setImageFailed] = React.useState(false);
-	const showImage = !!example.smiles && !imageFailed;
+	const imageUrl = example.smiles
+		? smilesToImageUrl(example.smiles)
+		: example.pdbId
+			? pdbImageUrl(example.pdbId)
+			: null;
+	const showImage = !!imageUrl && !imageFailed;
 	const chart = React.useMemo(
 		() =>
 			example.chart
@@ -39,8 +44,8 @@ export function ExampleCard({
 				) : showImage ? (
 					// eslint-disable-next-line @next/next/no-img-element
 					<img
-						src={smilesToImageUrl(example.smiles!)}
-						alt={`2D structure of ${example.name}`}
+						src={imageUrl!}
+						alt={`Structure of ${example.name}`}
 						loading="lazy"
 						onError={() => setImageFailed(true)}
 						className="max-h-full max-w-full bg-white object-contain"

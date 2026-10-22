@@ -8,10 +8,12 @@ import { cn } from "@/lib/utils";
 export interface StlPreviewProps {
 	data: ArrayBuffer;
 	className?: string;
+	/** Accessible description of what is shown. */
+	label?: string;
 }
 
 /** Drag-to-rotate viewer for a binary STL buffer returned by the backend. */
-export function StlPreview({ data, className }: StlPreviewProps) {
+export function StlPreview({ data, className, label }: StlPreviewProps) {
 	const containerRef = React.useRef<HTMLDivElement>(null);
 
 	React.useEffect(() => {
@@ -144,7 +146,9 @@ export function StlPreview({ data, className }: StlPreviewProps) {
 			ref={containerRef}
 			className={cn("relative block h-full w-full", className)}
 			role="img"
-			aria-label="Live 3D preview of the lithopane, drag to rotate"
+			aria-label={
+				label ?? "Live 3D preview of the lithopane, drag to rotate"
+			}
 		/>
 	);
 }

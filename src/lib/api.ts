@@ -65,6 +65,54 @@ export function fetchKeyCardStl(card: {
 	return postForStl("/api/data/donut/key", card);
 }
 
+// ─── Proteins ───────────────────────────────────────────────────────────────
+
+export const isPdbId = (s: string) => /^[0-9][a-z0-9]{3}$/i.test(s.trim());
+
+export const pdbImageUrl = (pdbId: string) =>
+	`https://cdn.rcsb.org/images/structures/${pdbId.trim().toLowerCase()}_assembly-1.jpeg`;
+
+/** Best-matching PDB ID for a free-text protein name. */
+export async function nameToPdbId(name: string): Promise<string> {
+	const res = await fetch(`/api/protein/generic-to-pdb/${encode(name)}`);
+	const data = (await res.json().catch(() => null)) as {
+		id?: string;
+	} | null;
+	if (!res.ok || !data?.id) throw new Error(`No protein found for “${name}”`);
+	return data.id;
+}
+
+/** Chain letters available in a PDB entry; throws if the entry is unknown. */
+export async function fetchPdbChains(pdbId: string): Promise<string[]> {
+	const res = await fetch(`/api/protein/chains/${encode(pdbId)}`);
+	if (!res.ok) throw new Error(`No PDB entry “${pdbId.toUpperCase()}”`);
+	const data = (await res.json()) as { chains?: string[] };
+	if (!data.chains?.length)
+		throw new Error(`No PDB entry “${pdbId.toUpperCase()}”`);
+	return data.chains;
+}
+
+export interface ProteinRequest {
+	pdbId: string;
+	/** Empty string means all chains. */
+	chain: string;
+	size: number;
+}
+
+const proteinBody = (r: ProteinRequest) => ({
+	pdb_id: r.pdbId.trim().toUpperCase(),
+	chain: r.chain,
+	size: r.size,
+	mode: "cartoon",
+});
+
+export const fetchProteinStl = (r: ProteinRequest) =>
+	postForStl("/api/protein/micromodel", proteinBody(r));
+
+/** Braille tag (PDB ID + mode) for the model. */
+export const fetchProteinTagStl = (r: ProteinRequest) =>
+	postForStl("/api/protein/micromodel/tag", proteinBody(r));
+
 export function downloadBuffer(data: ArrayBuffer, filename: string): void {
 	const url = URL.createObjectURL(new Blob([data], { type: "model/stl" }));
 	const a = document.createElement("a");
