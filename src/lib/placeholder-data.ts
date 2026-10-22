@@ -2,6 +2,9 @@
 // backend — it exists purely so the frontend has believable content to
 // render. Ported from the Tactoread Claude Design project's data() blocks.
 
+import type { ChartKind, DataRow } from "@/lib/charts";
+import { plotExamples } from "@/lib/plot-examples";
+
 export type CategoryKey = "mol" | "macro" | "cell" | "blot" | "plot";
 
 export interface ExampleItem {
@@ -12,6 +15,8 @@ export interface ExampleItem {
 	groups?: string[];
 	/** Small molecules: the SMILES the backend builds the model from. */
 	smiles?: string;
+	/** Data science: the chart drawn as the card's thumbnail. */
+	chart?: { kind: ChartKind; title: string; rows: DataRow[] };
 	/** Where clicking the card goes. */
 	href?: string;
 }
@@ -428,20 +433,13 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		total: 12,
 		blurb: "Build a bar chart, donut chart or scatter plot from your own numbers or a CSV file. The chart is printed raised, with braille labels.",
 		filters: filters(["All", "Bar", "Donut", "Scatter"]),
-		examples: examples([
-			["Plant growth: sun vs. shade", "Bar", "Biology"],
-			["Blood type frequency", "Bar", "Biology"],
-			["Average monthly rainfall", "Bar", "Earth science"],
-			["Test scores", "Bar", "Math"],
-			["Class favourite pets", "Donut", "Everyday"],
-			["Gases in the air", "Donut", "Chemistry"],
-			["Where water is on Earth", "Donut", "Earth science"],
-			["A day in the life", "Donut", "Everyday"],
-			["Height vs. arm span", "Scatter", "Math"],
-			["Study time vs. score", "Scatter", "Everyday"],
-			["Cricket chirps vs. temperature", "Scatter", "Biology"],
-			["Light vs. photosynthesis", "Scatter", "Biology"],
-		]),
+		examples: plotExamples.map((e) => ({
+			name: e.name,
+			meta: e.meta,
+			tag: e.tag,
+			chart: { kind: e.kind, title: e.title, rows: e.rows },
+			href: `/design/plot?example=${e.slug}`,
+		})),
 		designHref: "/design/plot",
 	},
 ];

@@ -42,6 +42,9 @@ function Textures() {
 		</defs>
 	);
 }
+// Rounded so server and client render identical path strings (no hydration diff).
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
 const TEXTURE_IDS = ["tx-dots", "tx-rows", "tx-cols"];
 
 const num = "fill-foreground font-mono text-[13px] font-semibold";
@@ -53,7 +56,7 @@ function Donut({ values }: { values: number[] }) {
 	const total = values.reduce((a, b) => a + b, 0);
 	// Counter-clockwise from 12 o'clock, like the printed card.
 	const at = (r: number, a: number) =>
-		[cx + r * Math.cos(a), cy - r * Math.sin(a)] as const;
+		[r2(cx + r * Math.cos(a)), r2(cy - r * Math.sin(a))] as const;
 	const starts = values.map(
 		(_, i) =>
 			Math.PI / 2 +

@@ -1,11 +1,14 @@
 import io
+import json
 import urllib.parse
+import urllib.request
 import uuid
 
 import requests
 from data_science import chart_card_stl, key_card_stl, key_lines
 from flask import Flask, after_this_request, jsonify, request, send_file
 from molec import molecule_card_stl
+from protein import build_model, build_tag, parse
 from util import create_temp, delete_temp
 
 app = Flask(__name__)
@@ -296,6 +299,147 @@ def data_science_scatter():
         mimetype="application/sla",
         as_attachment=True,
         download_name="scatter_plot.stl",
+    )
+
+
+@app.route("/api/protein/micromodel", methods=["GET", "POST"])
+def protein_micromodel():
+    data = request.get_json() or {}
+
+    pdb_id = data.get("pdb_id")
+    if not isinstance(pdb_id, str):
+        return jsonify({"error": "PDB ID must be a string"})
+
+    # mode is either cartoon or normal
+    mode = data.get("mode", "normal")
+    _VALID_MODES = ["cartoon", "normal"]
+    if mode not in _VALID_MODES:
+        return jsonify(
+            {"error": "Valid modes are cartoon or normal, defaults to normal"}
+        )
+
+    size = data.get("size", 20.0)
+    # size in mm
+    if not isinstance(size, (float, int)):
+        return jsonify(
+            {
+                "error": "Size (mm) must be a number greater than 0 and must be int or float"
+            }
+        )
+
+    if size <= 0:
+        return jsonify(
+            {
+                "error": "Size (mm) must be a number greater than 0 and must be int or float"
+            }
+        )
+
+    chain = data.get("chain", "")
+    possible_chains = get_chains(pdb_id)
+    if not isinstance(chain, str):
+        return jsonify({"error": "Chain must be a string"})
+
+    if chain == "":
+        pass
+    elif chain in possible_chains:
+        pass
+    else:
+        return jsonify({"error": "Chain must be valid or blank (for all)"})
+
+    _URL = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+    atoms, ss = parse(urllib.request.urlopen(_URL).read().decode(), chain)
+    model, s = build_model(atoms, ss, mode, size)
+    outpath = create_temp(model)
+
+    # build_tag([pdb_id, mode])
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name=f"{pdb_id}_model.stl",
+    )
+
+
+@app.route("/api/protein/micromodel/tag", methods=["GET", "POST"])
+def protein_micromodel_tag():
+    data = request.get_json() or {}
+
+    pdb_id = data.get("pdb_id")
+    if not isinstance(pdb_id, str):
+        return jsonify({"error": "PDB ID must be a string"})
+
+    # mode is either cartoon or normal
+    mode = data.get("mode", "normal")
+    _VALID_MODES = ["cartoon", "normal"]
+    if mode not in _VALID_MODES:
+        return jsonify(
+            {"error": "Valid modes are cartoon or normal, defaults to normal"}
+        )
+
+    size = data.get("size", 20.0)
+    # size in mm
+    if not isinstance(size, (float, int)):
+        return jsonify(
+            {
+                "error": "Size (mm) must be a number greater than 0 and must be int or float"
+            }
+        )
+
+    if size <= 0:
+        return jsonify(
+            {
+                "error": "Size (mm) must be a number greater than 0 and must be int or float"
+            }
+        )
+
+    chain = data.get("chain", "")
+    possible_chains = get_chains(pdb_id)
+    if not isinstance(chain, str):
+        return jsonify({"error": "Chain must be a string"})
+
+    if chain == "":
+        pass
+    elif chain in possible_chains:
+        pass
+    else:
+        return jsonify({"error": "Chain must be valid or blank (for all)"})
+
+    _URL = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+    atoms, ss = parse(urllib.request.urlopen(_URL).read().decode(), chain)
+    model, s = build_model(atoms, ss, mode, size)
+
+    tag = build_tag([pdb_id, mode])
+    outpath = create_temp(model)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name=f"{pdb_id}_key.stl",
+    )
+
+
+def get_chains(pdb_id):
+    q = f'{{entry(entry_id:"{pdb_id}"){{polymer_entities{{rcsb_polymer_entity_container_identifiers{{auth_asym_ids}}}}}}}}'
+    d = json.load(
+        urllib.request.urlopen(
+            "https://data.rcsb.org/graphql?query=" + urllib.parse.quote(q)
+        )
+    )
+    return sorted(
+        c
+        for e in d["data"]["entry"]["polymer_entities"]
+        for c in e["rcsb_polymer_entity_container_identifiers"]["auth_asym_ids"]
     )
 
 

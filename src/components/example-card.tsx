@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { Blueprint } from "@/components/blueprint";
 import { Badge } from "@/components/ui/badge";
+import { ChartPreview } from "@/components/plot/chart-preview";
 import { smilesToImageUrl } from "@/lib/api";
+import { validateChart } from "@/lib/charts";
 import type { ExampleItem } from "@/lib/placeholder-data";
 
 export function ExampleCard({
@@ -16,11 +18,25 @@ export function ExampleCard({
 }) {
 	const [imageFailed, setImageFailed] = React.useState(false);
 	const showImage = !!example.smiles && !imageFailed;
+	const chart = React.useMemo(
+		() =>
+			example.chart
+				? validateChart(
+						example.chart.kind,
+						example.chart.rows,
+						example.chart.title,
+						true,
+					).payload
+				: null,
+		[example.chart],
+	);
 
 	const card = (
 		<Blueprint className="flex h-full min-h-0 flex-col gap-2 border border-border p-2.5 transition-colors hover:border-primary">
 			<div className="hatch grid min-h-0 flex-1 place-items-center p-1.5 text-center font-mono text-[10px] leading-tight text-accent-700">
-				{showImage ? (
+				{chart ? (
+					<ChartPreview payload={chart} className="max-h-full" />
+				) : showImage ? (
 					// eslint-disable-next-line @next/next/no-img-element
 					<img
 						src={smilesToImageUrl(example.smiles!)}

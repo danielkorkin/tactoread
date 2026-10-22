@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { Check, ChartColumn, ChartPie, ChartScatter } from "lucide-react";
 import { Blueprint, BlueprintCorners } from "@/components/blueprint";
 import { ChartPreview } from "@/components/plot/chart-preview";
@@ -26,6 +27,7 @@ import {
 	type ChartPayload,
 	type DataRow,
 } from "@/lib/charts";
+import { getPlotExample, type PlotExample } from "@/lib/plot-examples";
 import { cn } from "@/lib/utils";
 
 type Source = "type" | "csv";
@@ -48,12 +50,12 @@ const KIND_ICONS = {
 	scatter: ChartScatter,
 } as const;
 
-const initialDrafts = (): Record<ChartKind, Draft> =>
+const initialDrafts = (example?: PlotExample): Record<ChartKind, Draft> =>
 	Object.fromEntries(
-		CHART_ORDER.map((k) => [
-			k,
-			{ title: SAMPLES[k].title, rows: SAMPLES[k].rows, trendline: true },
-		]),
+		CHART_ORDER.map((k) => {
+			const src = example?.kind === k ? example : SAMPLES[k];
+			return [k, { title: src.title, rows: src.rows, trendline: true }];
+		}),
 	) as Record<ChartKind, Draft>;
 
 const fileStem = (s: string, fallback: string) =>
@@ -66,10 +68,10 @@ const serverError = (e: unknown) =>
 			? e.message
 			: "Something went wrong building the model.";
 
-export default function PlotDesignPage() {
-	const [kind, setKind] = React.useState<ChartKind>("bar");
+function PlotDesign({ example }: { example?: PlotExample }) {
+	const [kind, setKind] = React.useState<ChartKind>(example?.kind ?? "bar");
 	// Each chart type keeps its own data, so switching never loses work.
-	const [drafts, setDrafts] = React.useState(initialDrafts);
+	const [drafts, setDrafts] = React.useState(() => initialDrafts(example));
 	const [source, setSource] = React.useState<Source>("type");
 	const [note, setNote] = React.useState<string | null>(null);
 	const [model, setModel] = React.useState<Model | null>(null);
@@ -444,5 +446,24 @@ export default function PlotDesignPage() {
 				</div>
 			)}
 		</DesignShell>
+	);
+}
+
+// Library cards link here with ?example=<slug> to start from that dataset.
+function LinkedPlotDesign() {
+	const params = useSearchParams();
+	return (
+		<PlotDesign
+			key={params.toString()}
+			example={getPlotExample(params.get("example"))}
+		/>
+	);
+}
+
+export default function PlotDesignPage() {
+	return (
+		<React.Suspense>
+			<LinkedPlotDesign />
+		</React.Suspense>
 	);
 }

@@ -4,3 +4,4 @@ rcsb-api
 numpy
 pillow
 openai
+scikit-image
