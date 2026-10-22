@@ -5,3 +5,4 @@ numpy
 pillow
 openai
 scikit-image
+rcsbsearchapi

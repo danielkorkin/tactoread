@@ -31,9 +31,8 @@ export function AppHeader() {
 				href="/"
 				className="mr-auto flex items-center gap-2.5 font-heading text-lg font-semibold"
 			>
-				<span className="grid size-6 place-items-center border-[1.5px] border-solid border-primary text-[15px] leading-none text-primary">
-					⠞
-				</span>
+				{/* eslint-disable-next-line @next/next/no-img-element */}
+				<img src="/logo.svg" alt="" className="size-7" />
 				Tactoread
 			</Link>
 			<div className="hidden items-center gap-7 lg:flex">

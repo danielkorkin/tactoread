@@ -9,6 +9,7 @@ from data_science import chart_card_stl, key_card_stl, key_lines
 from flask import Flask, after_this_request, jsonify, request, send_file
 from molec import molecule_card_stl
 from protein import build_model, build_tag, parse
+from rcsbsearchapi.search import TextQuery
 from util import create_temp, delete_temp
 
 app = Flask(__name__)
@@ -414,7 +415,7 @@ def protein_micromodel_tag():
     model, s = build_model(atoms, ss, mode, size)
 
     tag = build_tag([pdb_id, mode])
-    outpath = create_temp(model)
+    outpath = create_temp(tag)
 
     @after_this_request
     def remove_temp(response):
@@ -427,6 +428,22 @@ def protein_micromodel_tag():
         as_attachment=True,
         download_name=f"{pdb_id}_key.stl",
     )
+
+
+@app.route("/api/protein/chains/<pdb_id>", methods=["GET"])
+def get_chains_route(pdb_id):
+    chains = get_chains(pdb_id)
+    return jsonify({"chains": chains})
+
+
+@app.route("/api/protein/generic-to-pdb/<name>")
+def generic_to_pdb(name):
+    query = TextQuery(name)
+    pdb_ids = list(query("entry"))  # type: ignore
+    try:
+        return jsonify({"id": pdb_ids[0]})
+    except:
+        return jsonify({"error": "None found"})
 
 
 def get_chains(pdb_id):
