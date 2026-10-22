@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Blueprint } from "@/components/blueprint";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cloudflareLoader } from "@/lib/cloudflare-loader";
 import type { Category } from "@/lib/placeholder-data";
 
 export function CategoryCard({ category }: { category: Category }) {
@@ -20,6 +21,8 @@ export function CategoryCard({ category }: { category: Category }) {
 						src={category.image}
 						alt={`${category.name} example`}
 						fill
+						loader={cloudflareLoader}
+						unoptimized={category.image.endsWith(".svg")}
 						sizes="(min-width: 1024px) 20vw, (min-width: 640px) 50vw, 100vw"
 						className="object-contain object-center p-3"
 					/>
