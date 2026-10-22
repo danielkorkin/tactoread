@@ -441,7 +441,7 @@ def generic_to_pdb(name):
     query = TextQuery(name)
     pdb_ids = list(query("entry"))  # type: ignore
     try:
-        return jsonify({"id": pdb_ids[0]})
+        return jsonify({"results": pdb_ids[0:3]})
     except:
         return jsonify({"error": "None found"})
 

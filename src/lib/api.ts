@@ -72,14 +72,15 @@ export const isPdbId = (s: string) => /^[0-9][a-z0-9]{3}$/i.test(s.trim());
 export const pdbImageUrl = (pdbId: string) =>
 	`https://cdn.rcsb.org/images/structures/${pdbId.trim().toLowerCase()}_assembly-1.jpeg`;
 
-/** Best-matching PDB ID for a free-text protein name. */
-export async function nameToPdbId(name: string): Promise<string> {
+/** Top PDB matches (best first, up to three) for a free-text protein name. */
+export async function nameToPdbIds(name: string): Promise<string[]> {
 	const res = await fetch(`/api/protein/generic-to-pdb/${encode(name)}`);
 	const data = (await res.json().catch(() => null)) as {
-		id?: string;
+		results?: string[];
 	} | null;
-	if (!res.ok || !data?.id) throw new Error(`No protein found for “${name}”`);
-	return data.id;
+	if (!res.ok || !data?.results?.length)
+		throw new Error(`No protein found for “${name}”`);
+	return data.results;
 }
 
 /** Chain letters available in a PDB entry; throws if the entry is unknown. */

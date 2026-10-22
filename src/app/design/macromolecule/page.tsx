@@ -17,7 +17,7 @@ import {
 	fetchProteinStl,
 	fetchProteinTagStl,
 	isPdbId,
-	nameToPdbId,
+	nameToPdbIds,
 	pdbImageUrl,
 	type ProteinMode,
 	type ProteinRequest,
@@ -50,6 +50,8 @@ interface Suggestion {
 	name: string;
 	detail: string;
 	chain?: string;
+	/** Whether `name` is a real protein name (vs. a placeholder label). */
+	named: boolean;
 }
 
 const serverError = (e: unknown) =>
@@ -105,7 +107,7 @@ function MacromoleculeDesign({
 	const [activeIndex, setActiveIndex] = React.useState(0);
 	const [remote, setRemote] = React.useState<{
 		query: string;
-		pdbId: string;
+		pdbIds: string[];
 	} | null>(null);
 	const [entry, setEntry] = React.useState<Entry | null>(null);
 	const [chains, setChains] = React.useState<string[] | null>(null);
@@ -204,6 +206,7 @@ function MacromoleculeDesign({
 				? `Open PDB ${parsed.pdbId} · chain ${parsed.chain}`
 				: `Open PDB ${parsed.pdbId}`,
 			chain: parsed.chain,
+			named: !!known,
 		});
 	}
 	if (text) {
@@ -220,20 +223,24 @@ function MacromoleculeDesign({
 					name: s.name,
 					detail: `PDB ${s.pdbId} · ${s.tag}`,
 					chain: s.chain,
+					named: true,
 				});
 			}
 		}
 	}
-	if (
-		remote &&
-		remote.query === text &&
-		!suggestions.some((s) => s.pdbId === remote.pdbId)
-	) {
-		suggestions.push({
-			key: `remote-${remote.pdbId}`,
-			pdbId: remote.pdbId,
-			name: `Best match for “${query.trim()}”`,
-			detail: `PDB ${remote.pdbId} · from the Protein Data Bank`,
+	if (remote && remote.query === text) {
+		remote.pdbIds.forEach((pdbId, i) => {
+			if (suggestions.some((s) => s.pdbId === pdbId)) return;
+			suggestions.push({
+				key: `remote-${pdbId}`,
+				pdbId,
+				name:
+					i === 0
+						? `Best match for “${query.trim()}”`
+						: `Match for “${query.trim()}”`,
+				detail: `PDB ${pdbId} · from the Protein Data Bank`,
+				named: false,
+			});
 		});
 	}
 
@@ -249,9 +256,9 @@ function MacromoleculeDesign({
 		const id = ++searchId.current;
 		searchTimer.current = setTimeout(async () => {
 			try {
-				const pdbId = await nameToPdbId(t);
+				const pdbIds = await nameToPdbIds(t);
 				if (id === searchId.current)
-					setRemote({ query: t.toLowerCase(), pdbId });
+					setRemote({ query: t.toLowerCase(), pdbIds });
 			} catch {
 				/* no match: the local suggestions (if any) are enough */
 			}
@@ -259,12 +266,8 @@ function MacromoleculeDesign({
 	}
 
 	function pick(s: Suggestion) {
-		setQuery(s.name.startsWith("Best match") ? query : s.name);
-		void select(
-			s.pdbId,
-			s.name.startsWith("PDB entry") ? null : s.name,
-			s.chain,
-		);
+		if (s.named) setQuery(s.name);
+		void select(s.pdbId, s.named ? s.name : null, s.chain);
 	}
 
 	/** Enter on free text: try a PDB ID first, otherwise search by name. */
@@ -280,7 +283,7 @@ function MacromoleculeDesign({
 		setModel(null);
 		setEntry(null);
 		try {
-			const pdbId = await nameToPdbId(t);
+			const [pdbId] = await nameToPdbIds(t);
 			if (id === requestId.current) void select(pdbId, t);
 		} catch (e) {
 			if (id !== requestId.current) return;
