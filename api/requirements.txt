@@ -5,3 +5,7 @@ numpy
 pillow
 openai
 scikit-image
+requests
+trimesh
+rdkit
+scipy
