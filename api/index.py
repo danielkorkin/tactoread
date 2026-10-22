@@ -350,7 +350,7 @@ def protein_micromodel():
     _URL = f"https://files.rcsb.org/download/{pdb_id}.pdb"
     atoms, ss = parse(urllib.request.urlopen(_URL).read().decode(), chain)
     model, s = build_model(atoms, ss, mode, size)
-    outpath = create_temp(model)
+    outpath = create_temp(model.export(file_type="stl"))
 
     # build_tag([pdb_id, mode])
     @after_this_request
@@ -415,7 +415,7 @@ def protein_micromodel_tag():
     model, s = build_model(atoms, ss, mode, size)
 
     tag = build_tag([pdb_id, mode])
-    outpath = create_temp(tag)
+    outpath = create_temp(tag.export(file_type="stl"))
 
     @after_this_request
     def remove_temp(response):
