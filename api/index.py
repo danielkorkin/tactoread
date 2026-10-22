@@ -3,6 +3,7 @@ import urllib.parse
 import uuid
 
 import requests
+from data_science import chart_card_stl, key_card_stl, key_lines
 from flask import Flask, after_this_request, jsonify, request, send_file
 from molec import molecule_card_stl
 from util import create_temp, delete_temp
@@ -117,6 +118,171 @@ def smiles_to_name(smiles: str):
         return response.json()["PropertyTable"]["Properties"][0]["Title"]
     except (requests.RequestException, KeyError, IndexError, ValueError):
         return ""
+
+
+@app.route("/api/data/donut", methods=["GET"])
+def data_science_donut():
+    # _TYPES = ["donut", "bar", "scatter"]
+    data = request.json()
+
+    title = data.get("title", "Donut Chart")
+
+    values = data.get("values")
+    # should just be a list of numbers
+    if not isinstance(values, list):
+        return jsonify({"error": "Values of a donut should be a list of numbers"})
+
+    for value in values:
+        if isinstance(value, int):
+            pass
+        elif isinstance(value, float):
+            pass
+        else:
+            return jsonify({"error": "Values of a donut should be a list of numbers"})
+
+    stl = chart_card_stl("donut", values, title)
+    outpath = create_temp(stl)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name="donut.stl",
+    )
+
+
+@app.route("/api/data/donut/key", methods=["GET"])
+def data_science_donut_key():
+    # _TYPES = ["donut", "bar", "scatter"]
+    data = request.json()
+    title = data.get("title", "Donut Key Chart")
+    keys = data.get("keys")
+
+    # should just be a list of strings
+    if not isinstance(keys, list):
+        return jsonify({"error": "Keys of a donut should be a list of strings"})
+
+    for key in keys:
+        if isinstance(key, str):
+            pass
+        else:
+            return jsonify({"error": "Keys of a donut should be a list of strings"})
+
+    values = data.get("values")
+
+    # should be a list of numbers
+    if not isinstance(values, list):
+        return jsonify({"error": "Values of a donut should be a list of numbers"})
+
+    for value in values:
+        if isinstance(value, int):
+            pass
+        elif isinstance(value, float):
+            pass
+        else:
+            return jsonify({"error": "Values of a donut should be a list of numbers"})
+
+    stl = key_card_stl(key_lines(keys, values), title)
+    outpath = create_temp(stl)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name="donut_key.stl",
+    )
+
+
+@app.route("/api/data/bar", methods=["GET"])
+def data_science_bar():
+    # _TYPES = ["donut", "bar", "scatter"]
+    data = request.json()
+
+    title = data.get("title", "Bar Chart")
+
+    values = data.get("values")
+    # should just be a list of numbers
+    if not isinstance(values, list):
+        return jsonify({"error": "Values of a bar chart should be a list of numbers"})
+
+    for value in values:
+        if isinstance(value, int):
+            pass
+        elif isinstance(value, float):
+            pass
+        else:
+            return jsonify({"error": "Values of a donut should be a list of numbers"})
+
+    stl = chart_card_stl("bar", values, title)
+    outpath = create_temp(stl)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name="bar_chart.stl",
+    )
+
+
+@app.route("/api/data/scatter", methods=["GET"])
+def data_science_scatter():
+    # _TYPES = ["donut", "bar", "scatter"]
+    data = request.json()
+
+    title = data.get("title", "Scatter Plot")
+
+    values = data.get("values")
+    # should just be a list of numbers
+    if not isinstance(values, list):
+        return jsonify({"error": "Values of a bar chart should be a list of numbers"})
+
+    for value in values:
+        if isinstance(value, int):
+            pass
+        elif isinstance(value, float):
+            pass
+        else:
+            return jsonify({"error": "Values of a donut should be a list of numbers"})
+
+    trendline = data.get("trendline", True)
+    if not isinstance(trendline, bool):
+        return jsonify({"error": "Trendline either true or false"})
+
+    max_value = max(values)
+    min_value = min(values)
+    range_value = max_value - min_value
+    step = round(range_value / 12)
+    calculated_x_values = list(range(min_value, max_value + step, step))
+
+    stl = chart_card_stl("scatter", values, title, calculated_x_values, trendline)
+    outpath = create_temp(stl)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name="scatter_plot.stl",
+    )
 
 
 if __name__ == "__main__":
