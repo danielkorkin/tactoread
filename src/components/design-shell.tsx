@@ -1,4 +1,5 @@
 import * as React from "react";
+import { DesignTypeTabs } from "@/components/design-type-tabs";
 
 export function DesignShell({
 	breadcrumb,
@@ -20,6 +21,7 @@ export function DesignShell({
 					</div>
 					<h2 className="mt-1 mb-0">{title}</h2>
 				</div>
+				<DesignTypeTabs />
 				{children}
 			</div>
 			<div className="lg:sticky lg:top-[70px] lg:h-[720px]">{params}</div>

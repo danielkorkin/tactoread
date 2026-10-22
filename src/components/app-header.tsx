@@ -11,7 +11,7 @@ const NAV_LINKS = [
 		match: (p: string) => p === "/" || p.startsWith("/library"),
 	},
 	{
-		href: "/design/molecule",
+		href: "/design",
 		label: "Create your own",
 		match: (p: string) => p.startsWith("/design"),
 	},
