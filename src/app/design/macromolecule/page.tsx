@@ -19,6 +19,7 @@ import {
 	isPdbId,
 	nameToPdbId,
 	pdbImageUrl,
+	type ProteinMode,
 	type ProteinRequest,
 } from "@/lib/api";
 import { toBraille } from "@/lib/braille";
@@ -26,6 +27,11 @@ import { proteinSamples } from "@/lib/placeholder-data";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SIZE = 20;
+const DEFAULT_MODE: ProteinMode = "surface";
+const MODES: { value: ProteinMode; label: string }[] = [
+	{ value: "surface", label: "Surface" },
+	{ value: "cartoon", label: "Cartoon" },
+];
 const MANY_CHAINS = 8;
 
 interface Entry {
@@ -105,6 +111,7 @@ function MacromoleculeDesign({
 	const [chains, setChains] = React.useState<string[] | null>(null);
 	const [chain, setChain] = React.useState("");
 	const [size, setSize] = React.useState(DEFAULT_SIZE);
+	const [mode, setMode] = React.useState<ProteinMode>(DEFAULT_MODE);
 	const [model, setModel] = React.useState<Model | null>(null);
 	const [loading, setLoading] = React.useState(false);
 	const [tagLoading, setTagLoading] = React.useState(false);
@@ -159,8 +166,17 @@ function MacromoleculeDesign({
 					: "";
 			setChains(found);
 			setChain(picked);
-			void build({ pdbId: upper, chain: picked, size: DEFAULT_SIZE }, id);
+			void build(
+				{
+					pdbId: upper,
+					chain: picked,
+					size: DEFAULT_SIZE,
+					mode: DEFAULT_MODE,
+				},
+				id,
+			);
 			setSize(DEFAULT_SIZE);
+			setMode(DEFAULT_MODE);
 		},
 		[build],
 	);
@@ -297,13 +313,15 @@ function MacromoleculeDesign({
 		pdbId: entry.pdbId,
 		chain,
 		size,
+		mode,
 	};
 	const stale =
 		!!model &&
 		!!request &&
 		(model.req.pdbId !== request.pdbId ||
 			model.req.chain !== request.chain ||
-			model.req.size !== request.size);
+			model.req.size !== request.size ||
+			model.req.mode !== request.mode);
 
 	function rebuild() {
 		if (!request) return;
@@ -360,6 +378,14 @@ function MacromoleculeDesign({
 							</TableRow>
 							<TableRow>
 								<TableCell className="text-muted-foreground">
+									Mode
+								</TableCell>
+								<TableCell className="capitalize">
+									{model.req.mode}
+								</TableCell>
+							</TableRow>
+							<TableRow>
+								<TableCell className="text-muted-foreground">
 									Size
 								</TableCell>
 								<TableCell>{model.req.size} mm</TableCell>
@@ -376,7 +402,7 @@ function MacromoleculeDesign({
 						>
 							{toBraille(model.req.pdbId)}
 							<br />
-							{toBraille("cartoon")}
+							{toBraille(model.req.mode)}
 						</span>
 					</div>
 					<div className="mt-auto flex flex-col gap-2 border-t border-border pt-3.5">
@@ -593,6 +619,30 @@ function MacromoleculeDesign({
 							Single chain{chains[0] ? ` (${chains[0]})` : ""}
 						</span>
 					)}
+					<div className="flex flex-col gap-1.5">
+						<span className="text-[13px] text-foreground/78">
+							Model style
+						</span>
+						<div
+							role="group"
+							aria-label="Model style"
+							className="flex gap-1.5"
+						>
+							{MODES.map((m) => (
+								<Button
+									key={m.value}
+									size="sm"
+									variant={
+										m.value === mode ? "default" : "outline"
+									}
+									aria-pressed={m.value === mode}
+									onClick={() => setMode(m.value)}
+								>
+									{m.label}
+								</Button>
+							))}
+						</div>
+					</div>
 					<div className="flex max-w-md flex-col gap-1.5">
 						<div className="flex items-center justify-between text-[13px]">
 							<span className="text-foreground/78">
@@ -662,7 +712,8 @@ function MacromoleculeDesign({
 						)}
 						<figcaption className="m-0 border-t border-border px-3 py-2 text-xs text-muted-foreground">
 							{model.req.pdbId} · {chainLabel(model.req.chain)} ·{" "}
-							{model.req.size} mm · drag to rotate
+							{model.req.mode} · {model.req.size} mm · drag to
+							rotate
 						</figcaption>
 					</figure>
 				</div>

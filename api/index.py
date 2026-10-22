@@ -311,12 +311,12 @@ def protein_micromodel():
     if not isinstance(pdb_id, str):
         return jsonify({"error": "PDB ID must be a string"})
 
-    # mode is either cartoon or normal
-    mode = data.get("mode", "normal")
-    _VALID_MODES = ["cartoon", "normal"]
+    # mode is either cartoon or surface
+    mode = data.get("mode", "surface")
+    _VALID_MODES = ["cartoon", "surface"]
     if mode not in _VALID_MODES:
         return jsonify(
-            {"error": "Valid modes are cartoon or normal, defaults to normal"}
+            {"error": "Valid modes are cartoon or surface, defaults to normal"}
         )
 
     size = data.get("size", 20.0)
@@ -374,12 +374,12 @@ def protein_micromodel_tag():
     if not isinstance(pdb_id, str):
         return jsonify({"error": "PDB ID must be a string"})
 
-    # mode is either cartoon or normal
-    mode = data.get("mode", "normal")
-    _VALID_MODES = ["cartoon", "normal"]
+    # mode is either cartoon or surface
+    mode = data.get("mode", "surface")
+    _VALID_MODES = ["cartoon", "surface"]
     if mode not in _VALID_MODES:
         return jsonify(
-            {"error": "Valid modes are cartoon or normal, defaults to normal"}
+            {"error": "Valid modes are cartoon or surface, defaults to normal"}
         )
 
     size = data.get("size", 20.0)

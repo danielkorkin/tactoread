@@ -92,18 +92,21 @@ export async function fetchPdbChains(pdbId: string): Promise<string[]> {
 	return data.chains;
 }
 
+export type ProteinMode = "surface" | "cartoon";
+
 export interface ProteinRequest {
 	pdbId: string;
 	/** Empty string means all chains. */
 	chain: string;
 	size: number;
+	mode: ProteinMode;
 }
 
 const proteinBody = (r: ProteinRequest) => ({
 	pdb_id: r.pdbId.trim().toUpperCase(),
 	chain: r.chain,
 	size: r.size,
-	mode: "cartoon",
+	mode: r.mode,
 });
 
 export const fetchProteinStl = (r: ProteinRequest) =>
