@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+	images: {
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "storage.tactoread.org",
+				pathname: "/images/**",
+			},
+		],
+	},
 	// In dev the Flask backend (api/index.py) runs separately on :5328; on
 	// Vercel the services rewrites in vercel.json handle /api/*.
 	async rewrites() {

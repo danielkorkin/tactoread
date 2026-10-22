@@ -36,6 +36,8 @@ export interface Category {
 	name: string;
 	kicker: string;
 	thumb: string;
+	/** Hero image shown on the home card. */
+	image: string;
 	/** Small molecules: SMILES of the molecule drawn on the home card. */
 	thumbSmiles?: string;
 	total: number;
@@ -345,6 +347,7 @@ export function proteinHref(p: {
 const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	{
 		key: "mol",
+		image: "https://storage.tactoread.org/images/caffeine_logo.svg",
 		slug: "small-molecules",
 		name: "Small molecules",
 		kicker: "Lithopane",
@@ -372,6 +375,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	},
 	{
 		key: "macro",
+		image: "https://storage.tactoread.org/images/protein_logo.png",
 		slug: "macromolecules",
 		name: "Macromolecules",
 		kicker: "Micro model",
@@ -397,6 +401,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	},
 	{
 		key: "cell",
+		image: "https://storage.tactoread.org/images/cell_logo_single.png",
 		slug: "cell-images",
 		name: "Cell images",
 		kicker: "Lithophane",
@@ -427,6 +432,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	},
 	{
 		key: "blot",
+		image: "https://storage.tactoread.org/images/western_blot.png",
 		slug: "western-blots",
 		name: "Western blots",
 		kicker: "Tactile relief",
@@ -458,6 +464,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 	},
 	{
 		key: "plot",
+		image: "https://storage.tactoread.org/images/Logo_DS.svg",
 		slug: "data-plots",
 		name: "Data science plots",
 		kicker: "Tactile relief",
