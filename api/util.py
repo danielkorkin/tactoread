@@ -1,9 +1,9 @@
 import os
+import tempfile
 import uuid
 from pathlib import Path
 
-current_path = Path.cwd()
-temp_path = current_path.parent / "temp"
+temp_path = Path(tempfile.gettempdir()) / "tactoread"
 
 
 def create_temp(file_in) -> Path:
