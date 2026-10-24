@@ -79,6 +79,34 @@ export interface BlotRequest {
 export const fetchBlotStl = (r: BlotRequest) =>
 	postForStl("/api/blot/lithopane", r);
 
+export interface BlotLabels {
+	title: string;
+	lanes: string[];
+	ladder_kda: string[];
+	panels: string[];
+}
+
+/** Asks the AI to read the title, lanes, ladder and panels off a blot figure. */
+export async function fetchBlotLabels(image: string): Promise<BlotLabels> {
+	const res = await fetch("/api/blot/labels", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ image }),
+	});
+	const data = (await res.json().catch(() => null)) as
+		(Partial<BlotLabels> & { error?: string }) | null;
+	if (!res.ok || !data || data.error)
+		throw new Error(
+			data?.error ?? "The AI couldn't read labels from this image.",
+		);
+	return {
+		title: String(data.title ?? ""),
+		lanes: (data.lanes ?? []).map(String),
+		ladder_kda: (data.ladder_kda ?? []).map(String),
+		panels: (data.panels ?? []).map(String),
+	};
+}
+
 // ─── Proteins ───────────────────────────────────────────────────────────────
 
 export const isPdbId = (s: string) => /^[0-9][a-z0-9]{3}$/i.test(s.trim());

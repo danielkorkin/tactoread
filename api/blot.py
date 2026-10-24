@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
 try:  # works as api.blot_card and as "python api/blot_card.py"
@@ -40,6 +41,8 @@ panels: panel names, top to bottom, with sizes if printed (e.g. "Tubulin ~52 kDa
 # Braille cells are dot strings, as in stl.BRAILLE
 PUNCT = {"-": "36", ".": "256", ",": "2", ":": "25", "/": "34", "~": "4"}
 NUMBER_SIGN, LETTER_SIGN = "3456", "56"
+
+load_dotenv()
 
 
 def to_cells(text):

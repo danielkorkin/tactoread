@@ -1,15 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { ImageUp, Plus, X } from "lucide-react";
+import { ImageUp, Plus, Sparkles, X } from "lucide-react";
 import { Blueprint, BlueprintCorners } from "@/components/blueprint";
 import { DesignShell } from "@/components/design-shell";
 import { StlPreview } from "@/components/stl-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { downloadBuffer, fetchBlotStl } from "@/lib/api";
+import { downloadBuffer, fetchBlotLabels, fetchBlotStl } from "@/lib/api";
 import {
 	formatBytes,
 	laneLetter,
@@ -23,7 +22,7 @@ import {
 import { toBraille } from "@/lib/braille";
 import { cn } from "@/lib/utils";
 
-type Mode = "auto" | "manual";
+type Field = "title" | "lanes" | "ladder" | "panels";
 
 interface Model {
 	stl: ArrayBuffer;
@@ -40,14 +39,33 @@ const serverError = (e: unknown) =>
 			? e.message
 			: "Something went wrong building the model.";
 
-const labelClass = "mb-1.5 block text-[13px] text-foreground/78";
+const labelClass = "text-[13px] text-foreground/78";
+
+/** Labels a field and marks it when the AI filled it in. */
+function FieldLabel({
+	htmlFor,
+	children,
+	ai,
+}: {
+	htmlFor?: string;
+	children: React.ReactNode;
+	ai: boolean;
+}) {
+	return (
+		<div className="mb-1.5 flex items-center justify-between gap-2">
+			<label htmlFor={htmlFor} className={labelClass}>
+				{children}
+			</label>
+			{ai && <Badge variant="accent">AI filled</Badge>}
+		</div>
+	);
+}
 
 export default function WesternBlotDesignPage() {
 	const fileRef = React.useRef<HTMLInputElement>(null);
 	const requestId = React.useRef(0);
 	const [image, setImage] = React.useState<BlotImage | null>(null);
 	const [dragging, setDragging] = React.useState(false);
-	const [mode, setMode] = React.useState<Mode>("auto");
 	const [title, setTitle] = React.useState("");
 	const [lanes, setLanes] = React.useState<string[]>([""]);
 	const [ladder, setLadder] = React.useState("");
@@ -55,6 +73,10 @@ export default function WesternBlotDesignPage() {
 	const [model, setModel] = React.useState<Model | null>(null);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
+	const [aiLoading, setAiLoading] = React.useState(false);
+	const [aiNote, setAiNote] = React.useState<string | null>(null);
+	// Fields the AI filled in and the user hasn't touched since.
+	const [aiFields, setAiFields] = React.useState<Set<Field>>(new Set());
 
 	// Free the preview URL when it is replaced or the page unmounts.
 	React.useEffect(
@@ -69,15 +91,14 @@ export default function WesternBlotDesignPage() {
 		() =>
 			image && {
 				image: image.base64,
-				auto: mode === "auto",
-				// In AI mode the server ignores these, so don't let them mark the model stale.
-				title: mode === "auto" ? "" : title.trim(),
-				lanes: mode === "auto" ? [] : laneNames,
-				ladder: mode === "auto" ? [] : parseList(ladder),
-				panels: mode === "auto" ? [] : parseList(panels),
+				auto: false,
+				title: title.trim(),
+				lanes: laneNames,
+				ladder: parseList(ladder),
+				panels: parseList(panels),
 			},
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[image, mode, title, lanes, ladder, panels],
+		[image, title, lanes, ladder, panels],
 	);
 	const signature = request
 		? JSON.stringify({ ...request, image: image?.base64.length })
@@ -91,6 +112,8 @@ export default function WesternBlotDesignPage() {
 			setImage(next);
 			setModel(null);
 			setError(null);
+			setAiNote(null);
+			setAiFields(new Set());
 		} catch (e) {
 			setError(
 				e instanceof Error ? e.message : "Couldn't load that image.",
@@ -113,17 +136,87 @@ export default function WesternBlotDesignPage() {
 		} catch (e) {
 			if (id !== requestId.current) return;
 			setModel(null);
-			setError(
-				request.auto
-					? `${serverError(e)} If the AI couldn't read the labels, switch to “Enter myself”.`
-					: serverError(e),
-			);
+			setError(serverError(e));
 		} finally {
 			if (id === requestId.current) setLoading(false);
 		}
 	}
 
+	const hasLabels =
+		title.trim() !== "" ||
+		laneNames.length > 0 ||
+		ladder.trim() !== "" ||
+		panels.trim() !== "";
+
+	/** Reads the figure's labels. Unless `replace`, only empty fields are filled. */
+	async function fillWithAi(replace: boolean) {
+		if (!image) return;
+		setAiLoading(true);
+		setAiNote(null);
+		setError(null);
+		try {
+			const found = await fetchBlotLabels(image.base64);
+			const filled = new Set<Field>(replace ? [] : aiFields);
+			const take = (
+				f: Field,
+				empty: boolean,
+				apply: () => void,
+				any: boolean,
+			) => {
+				if (!any || !(replace || empty)) return;
+				apply();
+				filled.add(f);
+			};
+			const foundLanes = found.lanes.map((l) => l.trim()).filter(Boolean);
+			const foundTitle = normalizeBlotTitle(found.title).trim();
+			take(
+				"title",
+				title.trim() === "",
+				() => setTitle(foundTitle),
+				!!foundTitle,
+			);
+			take(
+				"lanes",
+				laneNames.length === 0,
+				() => setLanes(foundLanes),
+				foundLanes.length > 0,
+			);
+			take(
+				"ladder",
+				ladder.trim() === "",
+				() => setLadder(found.ladder_kda.join(", ")),
+				found.ladder_kda.length > 0,
+			);
+			take(
+				"panels",
+				panels.trim() === "",
+				() => setPanels(found.panels.join(", ")),
+				found.panels.length > 0,
+			);
+			setAiFields(filled);
+			setAiNote(
+				filled.size
+					? "Filled in from your figure. Check it and edit anything that's off."
+					: "The AI didn't find anything new to fill in.",
+			);
+		} catch (e) {
+			setError(serverError(e));
+		} finally {
+			setAiLoading(false);
+		}
+	}
+
+	function edit(field: Field) {
+		setAiFields((f) => {
+			if (!f.has(field)) return f;
+			const next = new Set(f);
+			next.delete(field);
+			return next;
+		});
+	}
+
 	function setLane(i: number, value: string) {
+		edit("lanes");
 		// Pasting "a, b, c" fills several lanes at once.
 		if (value.includes(",")) {
 			const parts = parseList(value);
@@ -134,174 +227,179 @@ export default function WesternBlotDesignPage() {
 	}
 
 	const warnings: string[] = [];
-	if (mode === "manual") {
-		if (title.trim().length > TITLE_CELLS)
-			warnings.push(
-				`The card title fits ${TITLE_CELLS} braille cells; the full title is added to the key instead.`,
-			);
-		if (laneNames.length > MAX_LANES)
-			warnings.push(
-				`More than ${MAX_LANES} lanes: letters won't be printed over the lanes, only listed in the key.`,
-			);
-		else if (laneNames.length > 14)
-			warnings.push(
-				"Lots of lanes: if they're too narrow, letters are skipped and only the key lists them.",
-			);
-		if (
-			laneNames.length +
-				parseList(ladder).length +
-				parseList(panels).length >
-			12
-		)
-			warnings.push(
-				"The key has limited space. Long lists may be cut off to keep the blot visible.",
-			);
-	}
+	if (title.trim().length > TITLE_CELLS)
+		warnings.push(
+			`The card title fits ${TITLE_CELLS} braille cells; the full title is added to the key instead.`,
+		);
+	if (laneNames.length > MAX_LANES)
+		warnings.push(
+			`More than ${MAX_LANES} lanes: letters won't be printed over the lanes, only listed in the key.`,
+		);
+	else if (laneNames.length > 14)
+		warnings.push(
+			"Lots of lanes: if they're too narrow, letters are skipped and only the key lists them.",
+		);
+	if (
+		laneNames.length + parseList(ladder).length + parseList(panels).length >
+		12
+	)
+		warnings.push(
+			"The key has limited space. Long lists may be cut off to keep the blot visible.",
+		);
 
 	const sidebar = (
 		<Blueprint className="flex h-full flex-col gap-4 overflow-y-auto p-4.5">
-			<div className="flex items-center justify-between">
-				<h4 className="m-0 text-base">Labels</h4>
-				<Badge variant="accent">
-					{mode === "auto" ? "AI" : "Manual"}
-				</Badge>
+			<h4 className="m-0 text-base">Labels</h4>
+
+			<div className="flex flex-col gap-2 border border-primary/40 bg-accent-100/60 p-3">
+				<Button
+					variant="secondary"
+					disabled={!image || aiLoading}
+					onClick={() => void fillWithAi(false)}
+				>
+					<Sparkles aria-hidden="true" />
+					{aiLoading
+						? "Reading your figure…"
+						: hasLabels
+							? "Fill blanks with AI"
+							: "Fill with AI"}
+				</Button>
+				<p className="m-0 text-xs text-muted-foreground">
+					{hasLabels
+						? "Keeps what you've typed and only fills empty fields."
+						: "Reads the title, lanes, ladder and panels from your figure. You can edit everything afterwards, or type your own first."}
+				</p>
+				{hasLabels && (
+					<button
+						type="button"
+						className="self-start text-xs text-primary underline underline-offset-2 disabled:opacity-45"
+						disabled={!image || aiLoading}
+						onClick={() => void fillWithAi(true)}
+					>
+						Replace everything with AI
+					</button>
+				)}
+				{aiNote && (
+					<p
+						role="status"
+						className="m-0 font-mono text-xs text-accent-700"
+					>
+						{aiNote}
+					</p>
+				)}
 			</div>
 
-			<ToggleGroup
-				variant="outline"
-				spacing={0}
-				value={[mode]}
-				onValueChange={(v: string[]) =>
-					v.length && setMode(v[v.length - 1] as Mode)
-				}
-				className="w-full"
-			>
-				<ToggleGroupItem
-					value="auto"
-					className="flex-1 px-3 text-[13px]"
-				>
-					Read with AI
-				</ToggleGroupItem>
-				<ToggleGroupItem
-					value="manual"
-					className="flex-1 px-3 text-[13px]"
-				>
-					Enter myself
-				</ToggleGroupItem>
-			</ToggleGroup>
+			<div>
+				<FieldLabel htmlFor="blot-title" ai={aiFields.has("title")}>
+					Title (printed in braille)
+				</FieldLabel>
+				<Input
+					id="blot-title"
+					value={title}
+					onChange={(e) => {
+						edit("title");
+						setTitle(normalizeBlotTitle(e.target.value));
+					}}
+					placeholder="e.g. p53 knockdown"
+					autoComplete="off"
+					spellCheck={false}
+				/>
+				<div className="mt-1.5 flex items-center justify-between gap-2">
+					<span
+						aria-hidden="true"
+						className="min-w-0 truncate font-mono text-xl tracking-wide text-accent-700"
+					>
+						{toBraille(title) || "⠀"}
+					</span>
+					<span className="shrink-0 font-mono text-xs text-muted-foreground">
+						{title.length} / {TITLE_CELLS}
+					</span>
+				</div>
+			</div>
 
-			{mode === "auto" ? (
-				<p className="m-0 text-[13px] text-muted-foreground">
-					AI reads the title, lane names, ladder sizes and panels from
-					your figure. Anything you&rsquo;ve typed is ignored, but
-					kept if you switch back.
-				</p>
-			) : (
-				<>
-					<div>
-						<label htmlFor="blot-title" className={labelClass}>
-							Title (printed in braille)
-						</label>
-						<Input
-							id="blot-title"
-							value={title}
-							onChange={(e) =>
-								setTitle(normalizeBlotTitle(e.target.value))
-							}
-							placeholder="e.g. p53 knockdown"
-							autoComplete="off"
-							spellCheck={false}
-						/>
-						<div className="mt-1.5 flex items-center justify-between gap-2">
-							<span
-								aria-hidden="true"
-								className="min-w-0 truncate font-mono text-xl tracking-wide text-accent-700"
+			<div>
+				<FieldLabel ai={aiFields.has("lanes")}>
+					Lanes, left to right
+				</FieldLabel>
+				<ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+					{lanes.map((name, i) => (
+						<li key={i} className="flex items-center gap-2">
+							<span className="w-5 shrink-0 text-center font-mono text-xs font-semibold text-accent-800">
+								{laneLetter(i)}
+							</span>
+							<Input
+								value={name}
+								onChange={(e) => setLane(i, e.target.value)}
+								aria-label={`Lane ${laneLetter(i)} name`}
+								placeholder="e.g. control"
+								autoComplete="off"
+							/>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label={`Remove lane ${laneLetter(i)}`}
+								disabled={lanes.length === 1 && !name}
+								onClick={() => {
+									edit("lanes");
+									setLanes((l) =>
+										l.length > 1
+											? l.filter((_, n) => n !== i)
+											: [""],
+									);
+								}}
 							>
-								{toBraille(title) || "⠀"}
-							</span>
-							<span className="shrink-0 font-mono text-xs text-muted-foreground">
-								{title.length} / {TITLE_CELLS}
-							</span>
-						</div>
-					</div>
+								<X aria-hidden="true" />
+							</Button>
+						</li>
+					))}
+				</ul>
+				<Button
+					variant="secondary"
+					size="sm"
+					className="mt-2"
+					onClick={() => {
+						edit("lanes");
+						setLanes((l) => [...l, ""]);
+					}}
+				>
+					<Plus aria-hidden="true" /> Add lane
+				</Button>
+				<p className="m-0 mt-1 text-xs text-muted-foreground">
+					Tip: paste a comma-separated list to fill several.
+				</p>
+			</div>
 
-					<div>
-						<span className={labelClass}>Lanes, left to right</span>
-						<ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-							{lanes.map((name, i) => (
-								<li key={i} className="flex items-center gap-2">
-									<span className="w-5 shrink-0 text-center font-mono text-xs font-semibold text-accent-800">
-										{laneLetter(i)}
-									</span>
-									<Input
-										value={name}
-										onChange={(e) =>
-											setLane(i, e.target.value)
-										}
-										aria-label={`Lane ${laneLetter(i)} name`}
-										placeholder="e.g. control"
-										autoComplete="off"
-									/>
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										aria-label={`Remove lane ${laneLetter(i)}`}
-										disabled={lanes.length === 1 && !name}
-										onClick={() =>
-											setLanes((l) =>
-												l.length > 1
-													? l.filter(
-															(_, n) => n !== i,
-														)
-													: [""],
-											)
-										}
-									>
-										<X aria-hidden="true" />
-									</Button>
-								</li>
-							))}
-						</ul>
-						<Button
-							variant="secondary"
-							size="sm"
-							className="mt-2"
-							onClick={() => setLanes((l) => [...l, ""])}
-						>
-							<Plus aria-hidden="true" /> Add lane
-						</Button>
-						<p className="m-0 mt-1 text-xs text-muted-foreground">
-							Tip: paste a comma-separated list to fill several.
-						</p>
-					</div>
+			<div>
+				<FieldLabel htmlFor="blot-ladder" ai={aiFields.has("ladder")}>
+					Ladder sizes (kDa)
+				</FieldLabel>
+				<Input
+					id="blot-ladder"
+					value={ladder}
+					onChange={(e) => {
+						edit("ladder");
+						setLadder(e.target.value);
+					}}
+					placeholder="250, 130, 70, 35"
+					autoComplete="off"
+				/>
+			</div>
 
-					<div>
-						<label htmlFor="blot-ladder" className={labelClass}>
-							Ladder sizes (kDa)
-						</label>
-						<Input
-							id="blot-ladder"
-							value={ladder}
-							onChange={(e) => setLadder(e.target.value)}
-							placeholder="250, 130, 70, 35"
-							autoComplete="off"
-						/>
-					</div>
-
-					<div>
-						<label htmlFor="blot-panels" className={labelClass}>
-							Panels (proteins probed)
-						</label>
-						<Input
-							id="blot-panels"
-							value={panels}
-							onChange={(e) => setPanels(e.target.value)}
-							placeholder="p53, GAPDH"
-							autoComplete="off"
-						/>
-					</div>
-				</>
-			)}
+			<div>
+				<FieldLabel htmlFor="blot-panels" ai={aiFields.has("panels")}>
+					Panels (proteins probed)
+				</FieldLabel>
+				<Input
+					id="blot-panels"
+					value={panels}
+					onChange={(e) => {
+						edit("panels");
+						setPanels(e.target.value);
+					}}
+					placeholder="p53, GAPDH"
+					autoComplete="off"
+				/>
+			</div>
 
 			<div
 				aria-live="polite"
@@ -327,9 +425,7 @@ export default function WesternBlotDesignPage() {
 					onClick={() => void generate()}
 				>
 					{loading
-						? mode === "auto"
-							? "Reading labels & building…"
-							: "Generating…"
+						? "Generating…"
 						: model && stale
 							? "Regenerate 3D model"
 							: "Generate 3D model"}
@@ -342,12 +438,9 @@ export default function WesternBlotDesignPage() {
 							downloadBuffer(
 								model.stl,
 								`${fileStem(
-									mode === "manual" && title
-										? title
-										: (image?.name.replace(
-												/\.[^.]+$/,
-												"",
-											) ?? ""),
+									title ||
+										(image?.name.replace(/\.[^.]+$/, "") ??
+											""),
 									"blot",
 								)}_blot.stl`,
 							)
@@ -360,7 +453,7 @@ export default function WesternBlotDesignPage() {
 		</Blueprint>
 	);
 
-	const laneCount = mode === "manual" ? laneNames.length : 0;
+	const laneCount = laneNames.length;
 
 	return (
 		<DesignShell
@@ -491,9 +584,7 @@ export default function WesternBlotDesignPage() {
 						>
 							{error ??
 								(loading
-									? mode === "auto"
-										? "Reading labels & building 3D model…"
-										: "Generating 3D model…"
+									? "Generating 3D model…"
 									: "Press Generate 3D model to see the printable card")}
 						</span>
 					</Blueprint>

@@ -4,6 +4,7 @@ import json
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
 
 import requests
 import stl
@@ -21,6 +22,7 @@ from blot import (
     key_lines as blot_key_lines,
 )
 from data_science import chart_card_stl, key_card_stl, key_lines
+from dotenv import load_dotenv
 from flask import Flask, after_this_request, jsonify, request, send_file
 from molec import molecule_card_stl
 from PIL import Image
@@ -29,6 +31,7 @@ from rcsbapi.search import TextQuery
 from util import create_temp, create_temp_name, delete_temp
 
 app = Flask(__name__)
+load_dotenv()
 
 
 @app.route("/api/smiles-to-image/<path:smiles>", methods=["GET"])
@@ -556,6 +559,31 @@ def western_blot_lithopane():
         download_name=f"{title}_blot.stl",
     )
 
+
+@app.route("/api/blot/labels", methods=["POST"])
+def get_ai_blot():
+    data = request.get_json() or {}
+    image_b64 = data.get("image")
+    image_obj = None
+    if image_b64:
+        try:
+            image_bytes = base64.b64decode(image_b64)
+            image_obj = Image.open(io.BytesIO(image_bytes))
+        except Exception as e:
+            return jsonify({"error": "Failed to decode the image"})
+    else:
+        return jsonify({"error": "Image is required for this api root in base 64"})
+
+    temp_image_path = create_temp(image_bytes)
+
+    found = read_labels(temp_image_path)
+
+    delete_temp(temp_image_path.stem)
+
+    return jsonify(found)
+
+
+# @app.route("/api/cell-image/lithopane")
 
 if __name__ == "__main__":
     app.run(port=5328)
