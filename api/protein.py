@@ -6,6 +6,8 @@ Parameters from Alonzo et al., Sci. Adv. 10, eadj8099 (2024): ~20 mm models,
 pip install numpy scipy scikit-image trimesh
 """
 
+import ctypes
+import gc
 import urllib.request
 
 import numpy as np
@@ -28,6 +30,15 @@ DOT_D, DOT_H, DOT_P, CELL_P, LINE_P, TAG_T = (
 )  # Braille (mm)
 
 
+def release_memory():
+    """Warm serverless instances are reused; hand freed heap back to the OS."""
+    gc.collect()
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except (OSError, AttributeError):
+        pass
+
+
 def parse(text, chain):
     """Heavy atoms (name, chain, residue, element, xyz) and helix/sheet ranges."""
     atoms, ss = [], []
@@ -46,21 +57,21 @@ def parse(text, chain):
     return atoms, ss
 
 
-def voxel_mesh(caps, lo=None, hi=None, extra=None):
+def voxel_mesh(caps, lo=None, hi=None, extra=None, vox=VOX):
     """Fill tapered tubes (a, b, ra, rb) into a 0.1 mm grid and mesh it."""
     if lo is None:
         lo = np.min([np.minimum(a, b) - max(ra, rb) for a, b, ra, rb in caps], 0)
         hi = np.max([np.maximum(a, b) + max(ra, rb) for a, b, ra, rb in caps], 0)
-    lo = np.asarray(lo, float) - 3 * VOX
-    shape = np.ceil((np.asarray(hi) - lo) / VOX).astype(int) + 4
+    lo = np.asarray(lo, float) - 3 * vox
+    shape = np.ceil((np.asarray(hi) - lo) / vox).astype(int) + 4
     g = np.zeros(shape, bool)
-    axes = [lo[k] + np.arange(shape[k]) * VOX for k in range(3)]
+    axes = [lo[k] + np.arange(shape[k]) * vox for k in range(3)]
     if extra:
         extra(g, axes)
     for a, b, ra, rb in caps:
         r = max(ra, rb)
-        i0 = np.maximum(((np.minimum(a, b) - r - lo) / VOX).astype(int), 0)
-        i1 = np.minimum(((np.maximum(a, b) + r - lo) / VOX).astype(int) + 2, shape)
+        i0 = np.maximum(((np.minimum(a, b) - r - lo) / vox).astype(int), 0)
+        i1 = np.minimum(((np.maximum(a, b) + r - lo) / vox).astype(int) + 2, shape)
         P = np.stack(
             np.meshgrid(*[axes[k][i0[k] : i1[k]] for k in range(3)], indexing="ij"), -1
         )
@@ -68,11 +79,14 @@ def voxel_mesh(caps, lo=None, hi=None, extra=None):
         t = np.clip((P - a) @ d / max(d @ d, 1e-12), 0, 1)
         dist = np.linalg.norm(P - a - t[..., None] * d, axis=-1)
         g[tuple(slice(*s) for s in zip(i0, i1))] |= dist <= ra + (rb - ra) * t
-    v, f, _, _ = marching_cubes(
-        gaussian_filter(np.pad(g, 2).astype(np.float32), 0.8), 0.5, spacing=(VOX,) * 3
-    )
-    m = trimesh.Trimesh(v + lo - 2 * VOX, f)
+    g = np.pad(g, 2).astype(np.float32)
+    g = gaussian_filter(g, 0.8, output=g)  # in place: no second full-size volume
+    v, f, _, _ = marching_cubes(g, 0.5, spacing=(vox,) * 3)
+    del g
+    m = trimesh.Trimesh(v + lo - 2 * vox, f)
+    del v, f
     m.fix_normals()
+    release_memory()
     return m
 
 
@@ -116,7 +130,8 @@ def build_model(atoms, ss, mode, size):
     ang = np.linspace(0, 2 * np.pi, 33)
     ring = eye + EYE_R * np.stack([0 * ang, np.cos(ang), np.sin(ang)], 1)
     caps += [(ring[i], ring[i + 1], EYE_T, EYE_T) for i in range(32)]
-    return voxel_mesh(caps), s
+    # coarsen voxels for big models so the grid stays ~200^3 (bounded memory)
+    return voxel_mesh(caps, vox=max(VOX, size / 200)), s
 
 
 LETTERS = dict(

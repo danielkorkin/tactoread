@@ -658,7 +658,7 @@ function MacromoleculeDesign({
 						<Slider
 							aria-label="Model size"
 							min={10}
-							max={100}
+							max={50}
 							step={1}
 							value={[size]}
 							onValueChange={(v) =>
