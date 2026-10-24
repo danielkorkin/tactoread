@@ -21,6 +21,7 @@ from blot import (
 from blot import (
     key_lines as blot_key_lines,
 )
+from cell_image import cell_image_card_stl
 from data_science import chart_card_stl, key_card_stl, key_lines
 from dotenv import load_dotenv
 from flask import Flask, after_this_request, jsonify, request, send_file
@@ -583,7 +584,36 @@ def get_ai_blot():
     return jsonify(found)
 
 
-# @app.route("/api/cell-image/lithopane")
+@app.route("/api/cell-image/lithopane", methods=["POST"])
+def cell_image_lithopane():
+    data = request.get_json() or {}
+    image_b64 = data.get("image")
+    if image_b64:
+        try:
+            image_bytes = base64.b64decode(image_b64)
+            image_obj = Image.open(io.BytesIO(image_bytes))
+        except Exception as e:
+            return jsonify({"error": "Failed to decode the image"})
+    else:
+        return jsonify({"error": "Image is required for this api root in base 64"})
+
+    title = data.get("title", "Cell Image")
+
+    cell_image_stl = cell_image_card_stl(image_obj, title)
+    outpath = create_temp(cell_image_stl)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(outpath.stem)
+        return response
+
+    return send_file(
+        outpath,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name="cell_image.stl",
+    )
+
 
 if __name__ == "__main__":
     app.run(port=5328)
