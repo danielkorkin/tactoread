@@ -65,6 +65,20 @@ export function fetchKeyCardStl(card: {
 	return postForStl("/api/data/donut/key", card);
 }
 
+export interface BlotRequest {
+	/** Raw base64, without a `data:` prefix. */
+	image: string;
+	/** When true the server reads the labels itself and ignores the rest. */
+	auto: boolean;
+	title: string;
+	lanes: string[];
+	ladder: string[];
+	panels: string[];
+}
+
+export const fetchBlotStl = (r: BlotRequest) =>
+	postForStl("/api/blot/lithopane", r);
+
 // ─── Proteins ───────────────────────────────────────────────────────────────
 
 export const isPdbId = (s: string) => /^[0-9][a-z0-9]{3}$/i.test(s.trim());

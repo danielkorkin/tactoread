@@ -4,7 +4,7 @@ import * as React from "react";
 import * as THREE from "three";
 import { cn } from "@/lib/utils";
 
-export type PreviewKind = "water" | "ethane" | "cells" | "blot";
+export type PreviewKind = "water" | "ethane" | "cells";
 
 export interface Preview3DProps {
 	kind: PreviewKind;
@@ -99,68 +99,43 @@ function buildMolecule(kind: PreviewKind, rep?: "ball" | "space") {
 	return group;
 }
 
-function heightFn(kind: PreviewKind): (u: number, v: number) => number {
-	const r = rng(kind === "cells" ? 5 : 9);
-	if (kind === "cells") {
-		const cs: { x: number; y: number; r: number; e: number }[] = [];
-		let n = 0;
-		while (cs.length < 18 && n++ < 600) {
-			const c = {
-				x: 0.1 + r() * 1.13,
-				y: 0.1 + r() * 0.8,
-				r: 0.07 + r() * 0.05,
-				e: 0.75 + r() * 0.4,
-			};
-			if (
-				cs.every(
-					(o) => Math.hypot(o.x - c.x, o.y - c.y) > o.r + c.r - 0.01,
-				)
-			)
-				cs.push(c);
-		}
-		return (u, v) => {
-			const x = u * 1.333;
-			let h = 0.06;
-			for (const c of cs) {
-				const dx = (x - c.x) / c.r;
-				const dy = (v - c.y) / (c.r * c.e);
-				const d = Math.sqrt(dx * dx + dy * dy);
-				if (d > 1.6) continue;
-				h +=
-					0.55 * Math.exp(-((d - 1) ** 2) / 0.01) +
-					(d < 1 ? 0.12 : 0) +
-					0.7 * Math.exp((-d * d) / 0.07);
-			}
-			return Math.min(1, h);
+function heightFn(): (u: number, v: number) => number {
+	const r = rng(5);
+	const cs: { x: number; y: number; r: number; e: number }[] = [];
+	let n = 0;
+	while (cs.length < 18 && n++ < 600) {
+		const c = {
+			x: 0.1 + r() * 1.13,
+			y: 0.1 + r() * 0.8,
+			r: 0.07 + r() * 0.05,
+			e: 0.75 + r() * 0.4,
 		};
+		if (
+			cs.every((o) => Math.hypot(o.x - c.x, o.y - c.y) > o.r + c.r - 0.01)
+		)
+			cs.push(c);
 	}
-	const L: number[] = [];
-	for (let i = 0; i < 7; i++) L.push(0.13 + i * (0.74 / 6));
-	const ladder = [0.18, 0.3, 0.42, 0.54, 0.66, 0.8];
-	const kd = [0, 0.95, 0.75, 0.55, 0.35, 0.18, 0.06];
 	return (u, v) => {
-		let h = 0.04;
-		L.forEach((c, i) => {
-			const gx = Math.exp(-(((u - c) / 0.042) ** 6));
-			if (gx < 0.01) return;
-			const bands =
-				i === 0
-					? ladder.map((y) => [y, 0.6])
-					: [
-							[0.72, 0.85],
-							[0.4, kd[i]],
-						];
-			for (const [y, a] of bands)
-				h += a * gx * Math.exp(-(((v - y) / 0.016) ** 2));
-		});
+		const x = u * 1.333;
+		let h = 0.06;
+		for (const c of cs) {
+			const dx = (x - c.x) / c.r;
+			const dy = (v - c.y) / (c.r * c.e);
+			const d = Math.sqrt(dx * dx + dy * dy);
+			if (d > 1.6) continue;
+			h +=
+				0.55 * Math.exp(-((d - 1) ** 2) / 0.01) +
+				(d < 1 ? 0.12 : 0) +
+				0.7 * Math.exp((-d * d) / 0.07);
+		}
 		return Math.min(1, h);
 	};
 }
 
-function buildLitho(kind: PreviewKind, invert: boolean) {
+function buildLitho(invert: boolean) {
 	const W = 100;
 	const H = 75;
-	const f = heightFn(kind);
+	const f = heightFn();
 	const g = new THREE.PlaneGeometry(W, H, 260, 195);
 	const p = g.attributes.position;
 	for (let i = 0; i < p.count; i++) {
@@ -183,7 +158,7 @@ function buildLitho(kind: PreviewKind, invert: boolean) {
 	return grp;
 }
 
-const LITHO_KINDS: PreviewKind[] = ["cells", "blot"];
+const LITHO_KINDS: PreviewKind[] = ["cells"];
 
 /**
  * Live, drag-to-rotate 3D preview. Client-only (WebGL); ported from the
@@ -225,9 +200,7 @@ export function Preview3D({
 		d2.position.set(4, -2, -3);
 		scene.add(d2);
 
-		const obj = isLitho
-			? buildLitho(kind, invert)
-			: buildMolecule(kind, rep);
+		const obj = isLitho ? buildLitho(invert) : buildMolecule(kind, rep);
 
 		const box = new THREE.Box3().setFromObject(obj);
 		if (base && !isLitho) {

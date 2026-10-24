@@ -11,12 +11,14 @@ from blot import (
     caption,
     dots,
     fit_blot,
-    key_lines,
     lane_letters,
     load_blot,
     read_labels,
     relief_mesh,
     save_card,
+)
+from blot import (
+    key_lines as blot_key_lines,
 )
 from data_science import chart_card_stl, key_card_stl, key_lines
 from flask import Flask, after_this_request, jsonify, request, send_file
@@ -489,14 +491,14 @@ def western_blot_lithopane():
     image_obj = None
     if image_b64:
         try:
-            image_bytes = base64.b64decode
+            image_bytes = base64.b64decode(image_b64)
             image_obj = Image.open(io.BytesIO(image_bytes))
         except Exception as e:
             return jsonify({"error": "Failed to decode the image"})
     else:
         return jsonify({"error": "Image is required for this api root in base 64"})
 
-    temp_image_path = create_temp(image_obj)
+    temp_image_path = create_temp(image_bytes)
 
     if isinstance(auto, bool):
         if auto:
@@ -527,7 +529,7 @@ def western_blot_lithopane():
         return jsonify({"error": "Title must be a string"})
 
     blot_top = stl.DRAW_TOP - (stl.BR_LINE if lanes else 0)
-    lines = key_lines(title, lanes, ladder, panels, blot_top)
+    lines = blot_key_lines(title, lanes, ladder, panels, blot_top)
     key_top = stl.DRAW_BOT + len(lines) * stl.BR_LINE
     braille = dots(lines, stl.MARGIN + stl.DOT_D / 2, key_top - 2 - stl.DOT_D / 2)
 

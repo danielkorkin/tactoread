@@ -494,25 +494,9 @@ export function getCategoryBySlug(slug: string): Category | undefined {
 	return categories.find((c) => c.slug === slug);
 }
 
-export interface BlotLane {
-	id: string;
-	label: string;
-	val: string;
-}
-
-export const blotLanes: BlotLane[] = [
-	["L1", "Ladder", "—"],
-	["L2", "Control", "1.00"],
-	["L3", "siRNA 5 nM", "0.79"],
-	["L4", "siRNA 10 nM", "0.58"],
-	["L5", "siRNA 20 nM", "0.37"],
-	["L6", "siRNA 40 nM", "0.19"],
-	["L7", "siRNA 80 nM", "0.06"],
-].map(([id, label, val]) => ({ id, label, val }));
-
 // ─── Print parameters (right-hand panel on every design screen) ────────────
 
-export type PrintSetKey = "cell" | "blot";
+export type PrintSetKey = "cell";
 
 export type ParamRow =
 	| {
@@ -572,13 +556,6 @@ const braille = (text: string): ParamRow => ({
 	text,
 });
 
-const standardResolution = seg(
-	"res",
-	"Resolution",
-	["Draft", "Standard", "Fine"],
-	1,
-);
-
 export interface PrintParamSet {
 	outputLabel: string;
 	estimate: string;
@@ -598,19 +575,6 @@ export const printParamSets: Record<PrintSetKey, PrintParamSet> = {
 			toggle("base", "Frame & stand", true),
 			toggle("scale", "Scale bar", true),
 			braille("neurons"),
-		],
-	},
-	blot: {
-		outputLabel: "Tactile relief",
-		estimate: "Est. 100 × 75 × 3.0 mm",
-		rows: [
-			range("size", "Panel width", 100, "mm", 50, 200),
-			range("relief", "Band height", 2, "mm", 0.4, 4, 0.1),
-			toggle("inv", "Invert (lithophane)", false),
-			standardResolution,
-			toggle("base", "Base plate", true),
-			toggle("scale", "Lane numbers", true),
-			braille("p53 knockdown"),
 		],
 	},
 };
