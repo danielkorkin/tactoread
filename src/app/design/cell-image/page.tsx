@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Blueprint, BlueprintCorners } from "@/components/blueprint";
 import { DesignShell } from "@/components/design-shell";
@@ -17,6 +18,11 @@ import {
 	prepareImage,
 	type UploadedImage,
 } from "@/lib/image";
+import {
+	fetchExampleFile,
+	getImageExample,
+	type ImageExample,
+} from "@/lib/image-examples";
 import { cn } from "@/lib/utils";
 
 interface Model {
@@ -33,11 +39,11 @@ const serverError = (e: unknown) =>
 			? e.message
 			: "Something went wrong building the model.";
 
-export default function CellImageDesignPage() {
+function CellImageDesign({ example }: { example?: ImageExample }) {
 	const fileRef = React.useRef<HTMLInputElement>(null);
 	const requestId = React.useRef(0);
 	const [image, setImage] = React.useState<UploadedImage | null>(null);
-	const [title, setTitle] = React.useState("");
+	const [title, setTitle] = React.useState(example?.title ?? "");
 	const [model, setModel] = React.useState<Model | null>(null);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
@@ -102,6 +108,26 @@ export default function CellImageDesignPage() {
 	}
 
 	usePasteImage((f) => void onFile(f));
+
+	// Arrived from a library card: load that example like an upload.
+	React.useEffect(() => {
+		if (!example) return;
+		let cancelled = false;
+		fetchExampleFile("cell", example)
+			.then((f) => {
+				if (!cancelled) void onFile(f);
+			})
+			.catch(() => {
+				if (!cancelled)
+					setError(
+						"Couldn't load that example. You can still upload your own.",
+					);
+			});
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [example]);
 
 	const stem =
 		title.trim().replace(/\s+/g, "_") ||
@@ -323,5 +349,24 @@ export default function CellImageDesignPage() {
 				</>
 			)}
 		</DesignShell>
+	);
+}
+
+// Library cards link here with ?example=<slug> to start from that image.
+function LinkedCellImageDesign() {
+	const params = useSearchParams();
+	return (
+		<CellImageDesign
+			key={params.toString()}
+			example={getImageExample("cell", params.get("example"))}
+		/>
+	);
+}
+
+export default function CellImageDesignPage() {
+	return (
+		<React.Suspense>
+			<LinkedCellImageDesign />
+		</React.Suspense>
 	);
 }

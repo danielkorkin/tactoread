@@ -266,3 +266,4 @@ __marimo__/
 vscode/
 # Frontend source (overrides the Python "lib/" rule above)
 !/src/lib/
+/r2-upload/

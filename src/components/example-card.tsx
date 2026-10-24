@@ -21,7 +21,7 @@ export function ExampleCard({
 		? smilesToImageUrl(example.smiles)
 		: example.pdbId
 			? pdbImageUrl(example.pdbId)
-			: null;
+			: (example.imageUrl ?? null);
 	const showImage = !!imageUrl && !imageFailed;
 	const chart = React.useMemo(
 		() =>
@@ -45,7 +45,11 @@ export function ExampleCard({
 					// eslint-disable-next-line @next/next/no-img-element
 					<img
 						src={imageUrl!}
-						alt={`Structure of ${example.name}`}
+						alt={
+							example.imageUrl
+								? example.name
+								: `Structure of ${example.name}`
+						}
 						loading="lazy"
 						onError={() => setImageFailed(true)}
 						className="max-h-full max-w-full bg-white object-contain"

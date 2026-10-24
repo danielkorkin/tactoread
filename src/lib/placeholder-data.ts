@@ -3,6 +3,14 @@
 // render. Ported from the Tactoread Claude Design project's data() blocks.
 
 import type { ChartKind, DataRow } from "@/lib/charts";
+import {
+	blotExamples,
+	cellExamples,
+	imageExampleHref,
+	imageExampleThumbUrl,
+	type ImageExample,
+	type ImageExampleKind,
+} from "@/lib/image-examples";
 import { plotExamples } from "@/lib/plot-examples";
 
 export type CategoryKey = "mol" | "macro" | "cell" | "blot" | "plot";
@@ -19,6 +27,8 @@ export interface ExampleItem {
 	chart?: { kind: ChartKind; title: string; rows: DataRow[] };
 	/** Macromolecules: PDB entry whose thumbnail the card shows. */
 	pdbId?: string;
+	/** Cell images and blots: thumbnail hosted on R2. */
+	imageUrl?: string;
 	/** Where clicking the card goes. */
 	href?: string;
 }
@@ -53,8 +63,18 @@ function filters(labels: string[]): FilterTag[] {
 	return labels.map((label, i) => ({ label, active: i === 0 }));
 }
 
-function examples(rows: [string, string, string][]): ExampleItem[] {
-	return rows.map(([name, meta, tag]) => ({ name, meta, tag }));
+function imageItems(
+	kind: ImageExampleKind,
+	list: ImageExample[],
+): ExampleItem[] {
+	return list.map((e) => ({
+		name: e.name,
+		meta: e.meta,
+		tag: e.tag,
+		groups: e.groups,
+		imageUrl: imageExampleThumbUrl(kind, e),
+		href: imageExampleHref(kind, e),
+	}));
 }
 
 // ─── Small-molecule samples (library cards + Create your own) ──────────────
@@ -406,29 +426,17 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		name: "Cell images",
 		kicker: "Lithophane",
 		thumb: "Micrograph",
-		total: 40,
+		total: cellExamples.length,
 		blurb: "Microscopy images made into lithophanes.",
 		filters: filters([
 			"All",
-			"Plant",
 			"Animal",
+			"Blood",
+			"Plant",
 			"Microbes",
 			"Cell division",
 		]),
-		examples: examples([
-			["Onion epidermis", "Brightfield · 10×", "Plant"],
-			["Neurons", "Fluorescence · 40×", "Animal"],
-			["Red blood cells", "Brightfield · 100×", "Animal"],
-			["Mitosis stages", "Onion root tip", "Division"],
-			["Cheek cells", "Methylene blue", "Animal"],
-			["Leaf stomata", "Brightfield · 40×", "Plant"],
-			["E. coli", "SEM", "Microbe"],
-			["Diatoms", "Darkfield", "Microbe"],
-			["Muscle fibers", "Striated · 40×", "Animal"],
-			["Pollen grains", "SEM", "Plant"],
-			["Budding yeast", "Phase contrast", "Microbe"],
-			["Elodea chloroplasts", "Brightfield · 40×", "Plant"],
-		]),
+		examples: imageItems("cell", cellExamples),
 		designHref: "/design/cell-image",
 	},
 	{
@@ -438,29 +446,16 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		name: "Western blots",
 		kicker: "Lithophane",
 		thumb: "Blot scan",
-		total: 18,
+		total: blotExamples.length,
 		blurb: "Lanes and bands are found automatically, then printed as a lithophane you can read by touch.",
 		filters: filters([
 			"All",
 			"Loading controls",
-			"Knockdowns",
-			"Time course",
-			"Dose response",
+			"Cancer",
+			"Signaling",
+			"Cell cycle",
 		]),
-		examples: examples([
-			["β-actin loading control", "6 lanes · 42 kDa", "Control"],
-			["GAPDH control", "8 lanes · 36 kDa", "Control"],
-			["p53 knockdown", "7 lanes · 53 kDa", "Knockdown"],
-			["Tubulin", "6 lanes · 55 kDa", "Control"],
-			["Phospho-ERK time course", "8 lanes · 42/44 kDa", "Time"],
-			["Insulin receptor", "5 lanes · 95 kDa", "Dose"],
-			["GFP expression", "6 lanes · 27 kDa", "Expression"],
-			["Protein ladder", "1 lane · 10–250 kDa", "Reference"],
-			["Heat shock HSP70", "6 lanes · 70 kDa", "Stress"],
-			["Caspase-3 cleavage", "6 lanes · 17/35 kDa", "Apoptosis"],
-			["Histone H3", "8 lanes · 17 kDa", "Nuclear"],
-			["Myc overexpression", "4 lanes · 62 kDa", "Expression"],
-		]),
+		examples: imageItems("blot", blotExamples),
 		designHref: "/design/western-blot",
 	},
 	{
