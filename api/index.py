@@ -114,6 +114,11 @@ def smiles_to_name_route(smiles):
 
 @app.route("/api/molecule/<path:smiles>", methods=["GET"])
 def molecule_3d(smiles):
+    # Proxies may leave the path percent-encoded; SMILES ring labels like %10
+    # decode to control chars, so only accept the decoded form if printable.
+    decoded = urllib.parse.unquote(smiles)
+    if decoded.isprintable():
+        smiles = decoded
     title = smiles_to_name(smiles)
     stl = molecule_card_stl(smiles, title=title)
     outpath = create_temp(stl)
