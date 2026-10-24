@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ImageUp, Plus, Sparkles, X } from "lucide-react";
+import { Plus, Sparkles, X } from "lucide-react";
 import { Blueprint, BlueprintCorners } from "@/components/blueprint";
+import { ImageDropzone, usePasteImage } from "@/components/image-dropzone";
 import { DesignShell } from "@/components/design-shell";
 import { StlPreview } from "@/components/stl-preview";
 import { Badge } from "@/components/ui/badge";
@@ -10,15 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { downloadBuffer, fetchBlotLabels, fetchBlotStl } from "@/lib/api";
 import {
-	formatBytes,
 	laneLetter,
 	MAX_LANES,
 	normalizeBlotTitle,
 	parseList,
-	prepareBlotImage,
 	TITLE_CELLS,
-	type BlotImage,
 } from "@/lib/blot";
+import { formatBytes, prepareImage, type UploadedImage } from "@/lib/image";
 import { toBraille } from "@/lib/braille";
 import { cn } from "@/lib/utils";
 
@@ -64,8 +63,7 @@ function FieldLabel({
 export default function WesternBlotDesignPage() {
 	const fileRef = React.useRef<HTMLInputElement>(null);
 	const requestId = React.useRef(0);
-	const [image, setImage] = React.useState<BlotImage | null>(null);
-	const [dragging, setDragging] = React.useState(false);
+	const [image, setImage] = React.useState<UploadedImage | null>(null);
 	const [title, setTitle] = React.useState("");
 	const [lanes, setLanes] = React.useState<string[]>([""]);
 	const [ladder, setLadder] = React.useState("");
@@ -108,7 +106,7 @@ export default function WesternBlotDesignPage() {
 	async function onFile(file: File | undefined) {
 		if (!file) return;
 		try {
-			const next = await prepareBlotImage(file);
+			const next = await prepareImage(file);
 			setImage(next);
 			setModel(null);
 			setError(null);
@@ -453,6 +451,8 @@ export default function WesternBlotDesignPage() {
 		</Blueprint>
 	);
 
+	usePasteImage((f) => void onFile(f));
+
 	const laneCount = laneNames.length;
 
 	return (
@@ -479,35 +479,11 @@ export default function WesternBlotDesignPage() {
 			/>
 
 			{!image ? (
-				<div
-					onDragOver={(e) => {
-						e.preventDefault();
-						setDragging(true);
-					}}
-					onDragLeave={() => setDragging(false)}
-					onDrop={(e) => {
-						e.preventDefault();
-						setDragging(false);
-						void onFile(e.dataTransfer.files[0]);
-					}}
-					className={cn(
-						"hatch-soft flex flex-col items-center gap-2 border border-dashed border-primary/60 px-4 py-12 text-center transition-colors",
-						dragging && "border-primary bg-accent-100",
-					)}
-				>
-					<ImageUp
-						className="size-6 text-primary"
-						aria-hidden="true"
-					/>
-					<p className="m-0 text-sm">Drop your blot image here</p>
-					<Button blueprint onClick={() => fileRef.current?.click()}>
-						Choose image
-					</Button>
-					<p className="m-0 max-w-sm text-xs text-muted-foreground">
-						PNG, JPEG, WebP, GIF or BMP. Large images are shrunk
-						automatically.
-					</p>
-				</div>
+				<ImageDropzone
+					prompt="Drop your blot image here"
+					onFile={(f) => void onFile(f)}
+					onChoose={() => fileRef.current?.click()}
+				/>
 			) : (
 				<>
 					<div className="flex flex-wrap items-center justify-between gap-3 border border-border px-3.5 py-2.5">

@@ -1,7 +1,6 @@
 /**
- * Grade-1 (uncontracted) Braille transliteration used for the live label
- * preview in the print parameters panel. Ported verbatim from the
- * PrintParams design component.
+ * Grade-1 (uncontracted) Braille transliteration used for the live title
+ * previews on the design pages.
  */
 export function toBraille(input: string): string {
 	const m = "⠁⠃⠉⠙⠑⠋⠛⠓⠊⠚⠅⠇⠍⠝⠕⠏⠟⠗⠎⠞⠥⠧⠺⠭⠽⠵";

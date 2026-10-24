@@ -107,6 +107,10 @@ export async function fetchBlotLabels(image: string): Promise<BlotLabels> {
 	};
 }
 
+/** Micrograph (raw base64, no `data:` prefix) to a lithophane card. */
+export const fetchCellImageStl = (r: { image: string; title: string }) =>
+	postForStl("/api/cell-image/lithopane", r);
+
 // ─── Proteins ───────────────────────────────────────────────────────────────
 
 export const isPdbId = (s: string) => /^[0-9][a-z0-9]{3}$/i.test(s.trim());

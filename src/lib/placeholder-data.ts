@@ -429,6 +429,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 			["Budding yeast", "Phase contrast", "Microbe"],
 			["Elodea chloroplasts", "Brightfield · 40×", "Plant"],
 		]),
+		designHref: "/design/cell-image",
 	},
 	{
 		key: "blot",
@@ -493,88 +494,3 @@ export const categories: Category[] = rawCategories.map((c, i) => ({
 export function getCategoryBySlug(slug: string): Category | undefined {
 	return categories.find((c) => c.slug === slug);
 }
-
-// ─── Print parameters (right-hand panel on every design screen) ────────────
-
-export type PrintSetKey = "cell";
-
-export type ParamRow =
-	| {
-			kind: "range";
-			id: string;
-			label: string;
-			value: number;
-			unit: string;
-			min: number;
-			max: number;
-			step: number;
-	  }
-	| {
-			kind: "seg";
-			id: string;
-			label: string;
-			options: string[];
-			selected: number;
-	  }
-	| { kind: "toggle"; id: string; label: string; on: boolean }
-	| { kind: "braille"; id: string; label: string; text: string };
-
-const range = (
-	id: string,
-	label: string,
-	value: number,
-	unit: string,
-	min: number,
-	max: number,
-	step = 1,
-): ParamRow => ({ kind: "range", id, label, value, unit, min, max, step });
-
-const seg = (
-	id: string,
-	label: string,
-	options: string[],
-	selected: number,
-): ParamRow => ({
-	kind: "seg",
-	id,
-	label,
-	options,
-	selected,
-});
-
-const toggle = (id: string, label: string, on: boolean): ParamRow => ({
-	kind: "toggle",
-	id,
-	label,
-	on,
-});
-
-const braille = (text: string): ParamRow => ({
-	kind: "braille",
-	id: "br",
-	label: "Braille label",
-	text,
-});
-
-export interface PrintParamSet {
-	outputLabel: string;
-	estimate: string;
-	rows: ParamRow[];
-}
-
-export const printParamSets: Record<PrintSetKey, PrintParamSet> = {
-	cell: {
-		outputLabel: "Lithophane",
-		estimate: "Est. 120 × 90 × 3.2 mm",
-		rows: [
-			range("size", "Panel width", 120, "mm", 50, 200),
-			range("min", "Min thickness", 0.8, "mm", 0.4, 2, 0.1),
-			range("max", "Max thickness", 3.2, "mm", 2, 6, 0.1),
-			toggle("inv", "Invert (lithophane)", true),
-			seg("res", "Resolution", ["Draft", "Standard", "Fine"], 2),
-			toggle("base", "Frame & stand", true),
-			toggle("scale", "Scale bar", true),
-			braille("neurons"),
-		],
-	},
-};
