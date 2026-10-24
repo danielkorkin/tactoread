@@ -17,6 +17,7 @@ import base64
 import io
 import json
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -203,72 +204,83 @@ def save_card(path, title, dot_list, relief=None):
         n += len(v)
     stl.write_stl(np.concatenate(V), np.concatenate(F), path)
     print("Saved", path)
+    return path
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("image")
-    ap.add_argument("--label", default="", help="title")
-    ap.add_argument("--lanes", default="", help="lane names, left to right")
-    ap.add_argument("--ladder", default="", help="ladder sizes in kDa, top to bottom")
-    ap.add_argument("--panels", default="", help="panel names, top to bottom")
-    ap.add_argument(
-        "--auto", action="store_true", help="read missing labels with OpenAI"
-    )
-    args = ap.parse_args()
-
-    split = lambda text: [t.strip() for t in text.split(",") if t.strip()]
-    title, lanes = args.label, split(args.lanes)
-    ladder, panels = split(args.ladder), split(args.panels)
-    if args.auto:  # labels you gave win
+def main(image, title="", lanes=(), ladder=(), panels=(), auto=False):
+    """Make <image>_blot.stl. Labels you pass win over ones read with auto=True."""
+    lanes, ladder, panels = list(lanes), list(ladder), list(panels)
+    if auto:
         try:
-            found = read_labels(args.image)
+            found = read_labels(image)
             print("Read from the figure:", found)
-            title = title or found["title"]
-            lanes, ladder = lanes or found["lanes"], ladder or found["ladder_kda"]
-            panels = panels or found["panels"]
         except Exception as err:
             print("Couldn't read the labels automatically:", err)
+        else:
+            title = title or found["title"]
+            lanes = lanes or found["lanes"]
+            ladder = ladder or found["ladder_kda"]
+            panels = panels or found["panels"]
 
-    # Key under the blot: lanes first, then ladder, panels and the full title
+    # Layout, top to bottom: lane letters, blot, key
+    blot_top = stl.DRAW_TOP - (stl.BR_LINE if lanes else 0)
+    lines = key_lines(title, lanes, ladder, panels, blot_top)
+    key_top = stl.DRAW_BOT + len(lines) * stl.BR_LINE
+    braille = dots(lines, stl.MARGIN + stl.DOT_D / 2, key_top - 2 - stl.DOT_D / 2)
+
+    signal = load_blot(image)
+    heights, x0 = fit_blot(signal, blot_top - key_top)
+    relief = relief_mesh(stl.BASE_T + stl.RELIEF_T * heights, x0, blot_top)
+    if lanes:
+        braille += lane_letters(signal, heights, x0, len(lanes))
+
+    path = Path(image).with_suffix("").as_posix() + "_blot.stl"
+    save_card(path, caption(title), braille, relief)
+
+
+def key_lines(title, lanes, ladder, panels, blot_top):
+    """Braille lines for the key under the blot, as many as leave MIN_BLOT mm of blot."""
     groups = [
         ", ".join(f"{chr(97 + k)} {name}" for k, name in enumerate(lanes)),
         "ladder kDa: " + " ".join(ladder) if ladder else "",
         "panels: " + ", ".join(panels) if panels else "",
-        title if caption(title) != title.lower() else "",
+        title if caption(title) != title.lower() else "",  # caption had to shorten it
     ]
     lines = [line for group in groups for line in wrap(group)]
-    top = stl.DRAW_TOP - (stl.BR_LINE if lanes else 0)
-    room = int((top - stl.DRAW_BOT - MIN_BLOT) // stl.BR_LINE)
+    room = int((blot_top - stl.DRAW_BOT - MIN_BLOT) // stl.BR_LINE)
     if len(lines) > room:
         print(f"Only {room} of {len(lines)} key lines fit; the rest are left out")
-        lines = lines[:room]
-    key_top = stl.DRAW_BOT + len(lines) * stl.BR_LINE
-    braille = dots(lines, stl.MARGIN + stl.DOT_D / 2, key_top - 2 - stl.DOT_D / 2)
+    return lines[:room]
 
-    # Blot: fills the space between the lane letters and the key
-    s = load_blot(args.image)
-    size = int(stl.USABLE_W / RES), int((top - key_top) / RES)
-    small = ImageOps.contain(Image.fromarray(s.astype(np.float32)), size)
+
+def fit_blot(signal, height):
+    """Scale the blot to the drawing width and `height` mm.
+    Returns relief heights 0..1 and the x of its left edge (centred)."""
+    size = int(stl.USABLE_W / RES), int(height / RES)
+    small = ImageOps.contain(Image.fromarray(signal.astype(np.float32)), size)
     small = np.clip(np.asarray(small), 0, 1)
     x0 = stl.MARGIN + (size[0] - small.shape[1]) // 2 * RES
-    relief = relief_mesh(stl.BASE_T + stl.RELIEF_T * small, x0, top)
+    return small, x0
 
-    if lanes:  # one letter centred over each lane; lanes split the span of the bands
-        mm = small.shape[1] * RES / s.shape[1]  # mm per image pixel
-        band = np.nonzero(s.sum(0) >= 0.25 * s.sum(0).max())[0]
-        pitch = (band[-1] + 1 - band[0]) / len(lanes)
-        if len(lanes) <= 26 and pitch * mm >= stl.BR_CELL:  # letters a full cell apart
-            y = stl.DRAW_TOP - stl.BR_LINE / 2 + stl.DOT_SP
-            for k in range(len(lanes)):
-                x = x0 + (band[0] + (k + 0.5) * pitch) * mm - stl.DOT_SP / 2
-                braille += dots([[stl.BRAILLE[chr(97 + k)]]], x, y)
-        else:
-            print("Lanes too narrow for Braille letters; the key lists them in order")
 
-    path = Path(args.image).with_suffix("").as_posix() + "_blot.stl"
-    save_card(path, caption(title), braille, relief)
+def lane_letters(signal, heights, x0, n):
+    """Dots for a Braille letter centred over each of n lanes;
+    the lanes split the span of the bands evenly."""
+    mm = heights.shape[1] * RES / signal.shape[1]  # mm per image pixel
+    profile = signal.sum(0)
+    band = np.nonzero(profile >= 0.25 * profile.max())[0]
+    pitch = (band[-1] + 1 - band[0]) / n
+    if n > 26 or pitch * mm < stl.BR_CELL:  # letters must sit a full cell apart
+        print("Lanes too narrow for Braille letters; the key lists them in order")
+        return []
+
+    y = stl.DRAW_TOP - stl.BR_LINE / 2 + stl.DOT_SP
+    letters = []
+    for k in range(n):
+        x = x0 + (band[0] + (k + 0.5) * pitch) * mm - stl.DOT_SP / 2
+        letters += dots([[stl.BRAILLE[chr(97 + k)]]], x, y)
+    return letters
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1])

@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import urllib.parse
@@ -5,12 +6,25 @@ import urllib.request
 import uuid
 
 import requests
+import stl
+from blot import (
+    caption,
+    dots,
+    fit_blot,
+    key_lines,
+    lane_letters,
+    load_blot,
+    read_labels,
+    relief_mesh,
+    save_card,
+)
 from data_science import chart_card_stl, key_card_stl, key_lines
 from flask import Flask, after_this_request, jsonify, request, send_file
 from molec import molecule_card_stl
+from PIL import Image
 from protein import build_model, build_tag, parse
 from rcsbapi.search import TextQuery
-from util import create_temp, delete_temp
+from util import create_temp, create_temp_name, delete_temp
 
 app = Flask(__name__)
 
@@ -457,6 +471,87 @@ def get_chains(pdb_id):
         c
         for e in d["data"]["entry"]["polymer_entities"]
         for c in e["rcsb_polymer_entity_container_identifiers"]["auth_asym_ids"]
+    )
+
+
+@app.route("/api/blot/lithopane", methods=["POST"])
+def western_blot_lithopane():
+    data = request.get_json() or {}
+
+    # lists
+    auto = data.get("auto", False)
+    lanes = data.get("lanes", [])
+    ladder = data.get("ladder", [])
+    panels = data.get("panels", [])
+    title = data.get("title", "Western Blot")
+    image_b64 = data.get("image")  # image in base 64
+
+    image_obj = None
+    if image_b64:
+        try:
+            image_bytes = base64.b64decode
+            image_obj = Image.open(io.BytesIO(image_bytes))
+        except Exception as e:
+            return jsonify({"error": "Failed to decode the image"})
+    else:
+        return jsonify({"error": "Image is required for this api root in base 64"})
+
+    temp_image_path = create_temp(image_obj)
+
+    if isinstance(auto, bool):
+        if auto:
+            try:
+                found = read_labels(temp_image_path)
+
+                title = found["title"]
+                lanes = found["lanes"]
+                ladder = found["ladder_kda"]
+                panels = found["panels"]
+
+            except Exception as e:
+                return jsonify(
+                    {"error": "There was an error in the extraction of the labels"}
+                )
+    else:
+        return jsonify(
+            {"error": "Invalid format, auto is boolean either true or false"}
+        )
+
+    if not isinstance(lanes, list):
+        return jsonify({"error": "Lanes must be a list"})
+    if not isinstance(ladder, list):
+        return jsonify({"error": "Ladder must be a list"})
+    if not isinstance(panels, list):
+        return jsonify({"error": "Panels must be a list"})
+    if not isinstance(title, str):
+        return jsonify({"error": "Title must be a string"})
+
+    blot_top = stl.DRAW_TOP - (stl.BR_LINE if lanes else 0)
+    lines = key_lines(title, lanes, ladder, panels, blot_top)
+    key_top = stl.DRAW_BOT + len(lines) * stl.BR_LINE
+    braille = dots(lines, stl.MARGIN + stl.DOT_D / 2, key_top - 2 - stl.DOT_D / 2)
+
+    signal = load_blot(temp_image_path)
+    heights, x0 = fit_blot(signal, blot_top - key_top)
+    relief = relief_mesh(stl.BASE_T + stl.RELIEF_T * heights, x0, blot_top)
+
+    if lanes:
+        braille += lane_letters(signal, heights, x0, len(lanes))
+
+    delete_temp(temp_image_path.stem)
+    path = create_temp_name()
+    file_stl_path = save_card(path, caption(title), braille, relief)
+
+    @after_this_request
+    def remove_temp(response):
+        delete_temp(file_stl_path.stem)
+        return response
+
+    return send_file(
+        file_stl_path,
+        mimetype="application/sla",
+        as_attachment=True,
+        download_name=f"{title}_blot.stl",
     )
 
 
