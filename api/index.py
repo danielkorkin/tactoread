@@ -509,6 +509,11 @@ def western_blot_lithopane():
 
     temp_image_path = create_temp(image_bytes)
 
+    @after_this_request
+    def remove_image(response):
+        delete_temp(temp_image_path.stem)
+        return response
+
     if isinstance(auto, bool):
         if auto:
             try:
@@ -551,12 +556,13 @@ def western_blot_lithopane():
 
     delete_temp(temp_image_path.stem)
     path = create_temp_name()
-    file_stl_path = save_card(path, caption(title), braille, relief)
 
     @after_this_request
     def remove_temp(response):
-        delete_temp(file_stl_path.stem)
+        delete_temp(path.stem)
         return response
+
+    file_stl_path = save_card(path, caption(title), braille, relief)
 
     return send_file(
         file_stl_path,
