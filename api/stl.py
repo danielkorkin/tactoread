@@ -3,17 +3,17 @@ from collections import Counter
 import numpy as np
 
 # Dimensions/layout in mm
-PLATE_W = 100.0
-PLATE_H = 74.5
+PLATE_W = 180.0
+PLATE_H = 140.0
 PLATE_T = 3.0  # max total thickness
-BASE_T = 0.8  # solid floor under all points
+BASE_T = 1.2  # solid floor under all points
 RELIEF_T = PLATE_T - BASE_T
-MARGIN = 6.0
-CAPTION_H = 12.0  # 14 braille cells at 6.2mm pitch
+MARGIN = 8.0
+CAPTION_H = 12.0  # 26 braille cells at 6.2mm pitch
 RULE_W = 1.5  # seperator ridge, full usable width
 RULE_T = 2.0  # total height above build plate
-RULE_GAP = 2.0  # clear space between ridge and drawing area
-CHAMFER = 8.0  # orientation cue, top-left corner
+RULE_GAP = 2.5  # clear space between ridge and drawing area
+CHAMFER = 10.0  # orientation cue, top-left corner
 
 # Brail variables
 BR_CELL = 6.2

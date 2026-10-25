@@ -24,9 +24,9 @@ ACUITY = 0.9  # fingertip two-point limit
 MIN_STROKE = 1.2  # line art is widened to this
 MEDIAN_R = 0.15  # speckle-removing median radius
 SIGMA = {"tone": 0.25, "field": 0.6, "line": 0.3}  # low-pass per mode
-FRAME_W = 3.0  # reinforcement frame width round the image
+FRAME_W = 10.0  # reinforcement frame width round the image
 FRAME_H = 1.0  # frame height above the floor
-PAD = 1.0  # keep-out from the drawing-area edge
+PAD = 0.0  # keep-out from the drawing-area edge
 CLIP = (1.0, 99.0)  # percentile contrast stretch
 
 
