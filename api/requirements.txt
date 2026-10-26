@@ -9,5 +9,5 @@ requests
 trimesh
 rdkit
 scipy
-Pillow
 python-dotenv
+gunicorn
