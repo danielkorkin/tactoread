@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TactoRead
 
-## Getting Started
+Turn molecules, proteins, cell images, western blots, and data into models you can print and pass around the room.
 
-First, run the development server:
+## Authors
+
+- [@danielkorkin](https://www.github.com/danielkorkin)
+- [@p0syd0n](https://github.com/p0syd0n)
+
+## Demo
+
+The live production app can be found at [tactoread.org](https://tactoread.org)
+
+## Installation
+
+Install TactoRead with pnpm
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+  pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then to install python requirements
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd api/
+pip install -r requirements.txt
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+To run this project, you will need to add the following environment variables to your .env file
 
-To learn more about Next.js, take a look at the following resources:
+`OPENAI_API_KEY`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Run Locally
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Clone the project
 
-## Deploy on Vercel
+```bash
+  git clone https://github.com/danielkorkin/tactoread
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Go to the project directory
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+  cd tactoread
+```
+
+Install dependencies
+
+```bash
+  pnpm install
+  cd api/
+  pip install -r requirements.txt
+```
+
+Start the server
+
+```bash
+  npm run dev
+  cd api/
+  python3 index.py
+```
+
+## Deployment
+
+To deploy this project run
+
+```bash
+  npm run build
+  npm run start
+```
+
+Then to deploy the api run
+
+```bash
+gunicorn index:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+```
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
+
+## Acknowledgements
+
+- [Universal pictures: A lithophane codex helps teenagers with blindness visualize nanoscopic systems](https://doi.org/10.1126/sciadv.adj8099)
