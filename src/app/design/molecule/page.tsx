@@ -51,7 +51,7 @@ function MoleculeDesign({
 	const suggestions = matchSuggestions(query);
 
 	/** Resolve `input` (known SMILES, common name, or raw SMILES) and fetch the
-	 * lithopane STL from the backend. */
+	 * lithophane STL from the backend. */
 	const load = React.useCallback(
 		async (input: string, knownSmiles?: string) => {
 			const text = input.trim();
@@ -129,7 +129,7 @@ function MoleculeDesign({
 		<Blueprint className="flex h-full flex-col gap-3.5 p-4.5">
 			<div className="flex items-center justify-between">
 				<h4 className="m-0 text-base">Model</h4>
-				<Badge variant="accent">Lithopane</Badge>
+				<Badge variant="accent">Lithophane</Badge>
 			</div>
 			{loaded ? (
 				<>
@@ -180,11 +180,11 @@ function MoleculeDesign({
 	return (
 		<DesignShell
 			breadcrumb="Library / Small molecules / Create your own"
-			title="Build a lithopane of a molecule"
+			title="Build a lithophane of a molecule"
 			params={sidebar}
 		>
 			<p className="m-0 max-w-2xl text-sm text-muted-foreground">
-				A lithopane is a thin printed card with the molecule raised on
+				A lithophane is a thin printed card with the molecule raised on
 				its surface, so you can read it by touch.{" "}
 				<Link href="/tutorial" className="text-primary underline">
 					How it works
@@ -296,7 +296,7 @@ function MoleculeDesign({
 					>
 						{error ??
 							(loading
-								? "Generating lithopane…"
+								? "Generating lithophane…"
 								: "Enter a name or SMILES, then press Load molecule")}
 					</span>
 				</Blueprint>
@@ -309,7 +309,7 @@ function MoleculeDesign({
 							className="min-h-0 flex-1"
 						/>
 						<figcaption className="m-0 border-t border-border px-3 py-2 text-xs text-muted-foreground">
-							3D lithopane · drag to rotate
+							3D lithophane · drag to rotate
 						</figcaption>
 					</figure>
 				</div>

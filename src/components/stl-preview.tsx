@@ -147,7 +147,7 @@ export function StlPreview({ data, className, label }: StlPreviewProps) {
 			className={cn("relative block h-full w-full", className)}
 			role="img"
 			aria-label={
-				label ?? "Live 3D preview of the lithopane, drag to rotate"
+				label ?? "Live 3D preview of the lithophane, drag to rotate"
 			}
 		/>
 	);

@@ -370,7 +370,7 @@ const rawCategories: Omit<Category, "n" | "idx" | "count">[] = [
 		image: "https://storage.tactoread.org/images/caffeine_logo.svg",
 		slug: "small-molecules",
 		name: "Small molecules",
-		kicker: "Lithopane",
+		kicker: "Lithophane",
 		thumb: "Small molecules",
 		thumbSmiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
 		total: moleculeSamples.length,

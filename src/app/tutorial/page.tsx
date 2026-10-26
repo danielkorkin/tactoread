@@ -32,10 +32,10 @@ export default function TutorialPage() {
 			</div>
 
 			<Blueprint className="flex flex-col gap-2 p-5">
-				<h2 className="m-0 text-xl">What is a lithopane?</h2>
+				<h2 className="m-0 text-xl">What is a lithophane?</h2>
 				<p className="m-0 text-[15px]">
-					A lithopane is a thin panel whose surface is shaped to carry
-					a picture. Here, the atoms and bonds of a molecule are
+					A lithophane is a thin panel whose surface is shaped to
+					carry a picture. Here, the atoms and bonds of a molecule are
 					raised as smooth ridges on a small card, with the
 					molecule&apos;s name in braille. Run a finger over it and
 					you can feel the structure, which makes chemistry accessible
