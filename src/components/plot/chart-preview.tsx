@@ -102,7 +102,7 @@ function Donut({ values }: { values: number[] }) {
 }
 
 function Bars({ values }: { values: number[] }) {
-	const [left, right, top, base] = [40, W - 40, 44, H - 54];
+	const [left, right, top, base] = [40, W - 40, 40, H - 67];
 	const max = Math.max(...values, 1e-9);
 	const slot = (right - left) / values.length;
 	const bw = Math.min(56, slot * 0.62);
@@ -150,7 +150,7 @@ function Scatter({
 	ys: number[];
 	trendline: boolean;
 }) {
-	const [left, right, top, bottom] = [52, W - 36, 36, H - 48];
+	const [left, right, top, bottom] = [44, W - 44, 40, H - 40];
 	const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
 	const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
 	const px = (x: number) =>
