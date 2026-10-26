@@ -16,7 +16,7 @@ export function CategoryCard({ category }: { category: Category }) {
 				<div>
 					<Badge variant="accent">{category.kicker}</Badge>
 				</div>
-				<div className="relative min-h-[170px] flex-1 bg-white">
+				<div className="relative flex min-h-[170px] flex-1 items-center justify-center bg-white">
 					<Image
 						src={category.image}
 						alt={`${category.name} example`}
@@ -24,7 +24,7 @@ export function CategoryCard({ category }: { category: Category }) {
 						loader={cloudflareLoader}
 						unoptimized={category.image.endsWith(".svg")}
 						sizes="(min-width: 1024px) 20vw, (min-width: 640px) 50vw, 100vw"
-						className="object-contain object-center p-3"
+						className="m-auto object-contain object-center p-3"
 					/>
 				</div>
 				<div className="font-heading text-xl font-semibold">
